@@ -1,5 +1,5 @@
-import Settings from "./Settings";
+import Settings from './Settings';
 
 export default function App() {
-  return (<Settings />);
+  return <Settings />;
 }

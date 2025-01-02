@@ -1,5 +1,13 @@
-import { Button, Dialog, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { useEffect, useState } from 'react';
 
 export default function Settings() {
   const [twitchChannel, setTwitchChannel] = useState('');
@@ -14,25 +22,21 @@ export default function Settings() {
       setVersion(await versionPromise);
 
       setGotSettings(true);
-    }
+    };
     inner();
   }, []);
 
   const [open, setOpen] = useState(false);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
-  if (
-    gotSettings &&
-    !hasAutoOpened &&
-    !twitchChannel
-  ) {
+  if (gotSettings && !hasAutoOpened && !twitchChannel) {
     setOpen(true);
     setHasAutoOpened(true);
   }
 
   return (
     <>
-      <Button 
+      <Button
         onClick={() => {
           setOpen(true);
         }}
@@ -43,7 +47,7 @@ export default function Settings() {
       <Dialog
         open={open}
         onClose={async () => {
-          await window.electron.setTwitchChannel(twitchChannel)
+          await window.electron.setTwitchChannel(twitchChannel);
           setOpen(false);
         }}
       >
@@ -54,9 +58,7 @@ export default function Settings() {
           marginRight="24px"
         >
           <DialogTitle>Settings</DialogTitle>
-          <Typography variant="caption">
-            Techobot2 version {version}
-          </Typography>
+          <Typography variant="caption">Techobot2 version {version}</Typography>
         </Stack>
         <DialogContent>
           <TextField
@@ -71,5 +73,5 @@ export default function Settings() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

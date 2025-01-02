@@ -1,9 +1,11 @@
-import { app, ipcMain } from "electron"
-import Store from "electron-store";
+import { app, ipcMain } from 'electron';
+import Store from 'electron-store';
 
 export default function setupIPC() {
   const store = new Store<{ twitchChannel: string }>();
-  let twitchChannel = store.has('twitchChannel') ? store.get('twitchChannel') : '';
+  let twitchChannel = store.has('twitchChannel')
+    ? store.get('twitchChannel')
+    : '';
 
   ipcMain.removeAllListeners('getTwitchChannel');
   ipcMain.handle('getTwitchChannel', () => twitchChannel);

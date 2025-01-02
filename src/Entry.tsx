@@ -4,11 +4,13 @@ import App from './App';
 
 const root = createRoot(document.body);
 root.render(
-  <ThemeProvider theme={createTheme({
-    typography: {
-      fontFamily: 'Lora Variable',
-    },
-  })}>
+  <ThemeProvider
+    theme={createTheme({
+      typography: {
+        fontFamily: 'Lora Variable',
+      },
+    })}
+  >
     <App />
-  </ThemeProvider>
+  </ThemeProvider>,
 );
