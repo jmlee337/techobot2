@@ -1,4 +1,5 @@
-import { createRoot } from 'react-dom/client';
+import Settings from "./Settings";
 
-const root = createRoot(document.body);
-root.render(<h1>Hello World</h1>);
+export default function App() {
+  return (<Settings />);
+}

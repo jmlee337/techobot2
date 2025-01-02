@@ -28,4 +28,4 @@
 
 import '@fontsource-variable/lora';
 import './index.css';
-import './App';
+import './Entry';
