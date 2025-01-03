@@ -7,7 +7,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import TwitchSettings from './SettingsTwitch';
+import Twitch from './Twitch';
 
 export default function Settings() {
   const [version, setVersion] = useState('');
@@ -47,7 +47,7 @@ export default function Settings() {
           <Typography variant="caption">Techobot2 version {version}</Typography>
         </Stack>
         <DialogContent>
-          <TwitchSettings version={version} />
+          <Twitch version={version} />
         </DialogContent>
       </Dialog>
     </>

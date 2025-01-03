@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  TwitchCallbackServerStatus,
-  TwitchChatClientStatus,
-  TwitchSettings,
-} from './types';
-import {
   Button,
   CircularProgress,
   Dialog,
@@ -16,8 +11,13 @@ import {
   TextField,
 } from '@mui/material';
 import { ContentCopy } from '@mui/icons-material';
+import {
+  TwitchCallbackServerStatus,
+  TwitchSettings,
+  TwitchChatClientStatus,
+} from '../types';
 
-export default function TwitchSettings({ version }: { version: string }) {
+export default function Twitch({ version }: { version: string }) {
   const [callbackServerStatus, setCallbackServerStatus] = useState(
     TwitchCallbackServerStatus.STOPPED,
   );
