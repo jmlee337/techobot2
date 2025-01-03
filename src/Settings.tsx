@@ -4,35 +4,22 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
+import TwitchSettings from './SettingsTwitch';
 
 export default function Settings() {
-  const [twitchChannel, setTwitchChannel] = useState('');
   const [version, setVersion] = useState('');
-  const [gotSettings, setGotSettings] = useState(false);
   useEffect(() => {
     const inner = async () => {
-      const twitchChannelPromise = window.electron.getTwitchChannel();
       const versionPromise = window.electron.getVersion();
-
-      setTwitchChannel(await twitchChannelPromise);
       setVersion(await versionPromise);
-
-      setGotSettings(true);
     };
     inner();
   }, []);
 
   const [open, setOpen] = useState(false);
-  const [hasAutoOpened, setHasAutoOpened] = useState(false);
-
-  if (gotSettings && !hasAutoOpened && !twitchChannel) {
-    setOpen(true);
-    setHasAutoOpened(true);
-  }
 
   return (
     <>
@@ -47,7 +34,6 @@ export default function Settings() {
       <Dialog
         open={open}
         onClose={async () => {
-          await window.electron.setTwitchChannel(twitchChannel);
           setOpen(false);
         }}
       >
@@ -61,15 +47,7 @@ export default function Settings() {
           <Typography variant="caption">Techobot2 version {version}</Typography>
         </Stack>
         <DialogContent>
-          <TextField
-            label="Twitch channel"
-            onChange={(event) => {
-              setTwitchChannel(event.target.value);
-            }}
-            size="small"
-            value={twitchChannel}
-            variant="filled"
-          />
+          <TwitchSettings version={version} />
         </DialogContent>
       </Dialog>
     </>
