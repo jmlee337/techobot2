@@ -4,14 +4,18 @@ export enum TwitchCallbackServerStatus {
   STARTED,
 }
 
-export enum TwitchChatClientStatus {
+export enum TwitchConnection {
+  BOT,
+  CHANNEL,
+}
+
+export enum TwitchConnectionStatus {
   DISCONNECTED,
   CONNECTING,
   CONNECTED,
 }
 
-export type TwitchSettings = {
-  channel: string;
+export type TwitchClient = {
   clientId: string;
   clientSecret: string;
 };

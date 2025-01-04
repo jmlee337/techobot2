@@ -3,32 +3,52 @@ import Store from 'electron-store';
 import Twitch from './twitch';
 import {
   TwitchCallbackServerStatus,
-  TwitchChatClientStatus,
-  TwitchSettings,
+  TwitchConnectionStatus,
+  TwitchClient,
+  TwitchConnection,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 
 export default function setupIPC(mainWindow: BrowserWindow) {
   const store = new Store<{
-    twitchSettings: TwitchSettings;
-    twitchAccessToken: AccessToken;
+    twitchBotClient: TwitchClient;
+    twitchBotAccessToken: AccessToken;
+    twitchChannelClient: TwitchClient;
+    twitchChannelAccessToken: AccessToken;
   }>();
-  let twitchSettings = store.has('twitchSettings')
-    ? store.get('twitchSettings')
-    : { channel: '', clientId: '', clientSecret: '' };
-  let twitchAccessToken = store.has('twitchAccessToken')
-    ? store.get('twitchAccessToken')
+  let twitchBotClient = store.has('twitchBotClient')
+    ? store.get('twitchBotClient')
+    : { clientId: '', clientSecret: '' };
+  let twitchBotAccessToken = store.has('twitchBotAccessToken')
+    ? store.get('twitchBotAccessToken')
+    : null;
+  let twitchChannelClient = store.has('twitchChannelClient')
+    ? store.get('twitchChannelClient')
+    : { clientId: '', clientSecret: '' };
+  let twitchChannelAccessToken = store.has('twitchChannelAccessToken')
+    ? store.get('twitchChannelAccessToken')
     : null;
 
   let twitchCallbackServerStatus = TwitchCallbackServerStatus.STOPPED;
   let twitchCallbackServerPort = 0;
-  let twitchChatClientStatus = TwitchChatClientStatus.DISCONNECTED;
+  let twitchBotStatus = TwitchConnectionStatus.DISCONNECTED;
+  let twitchBotStatusMessage = '';
+  let twitchChannelStatus = TwitchConnectionStatus.DISCONNECTED;
+  let twitchChannelStatusMessage = '';
+  let twitchBotUserName = '';
+  let twitchChannel = '';
   const twitch = new Twitch(
-    twitchSettings,
-    twitchAccessToken,
-    (newTwitchAccessToken) => {
-      twitchAccessToken = newTwitchAccessToken;
-      store.set('twitchAccessToken', twitchAccessToken);
+    twitchBotClient,
+    twitchBotAccessToken,
+    twitchChannelClient,
+    twitchChannelAccessToken,
+    (newTwitchBotAccessToken) => {
+      twitchBotAccessToken = newTwitchBotAccessToken;
+      store.set('twitchBotAccessToken', twitchBotAccessToken);
+    },
+    (newTwitchChannelAccessToken) => {
+      twitchChannelAccessToken = newTwitchChannelAccessToken;
+      store.set('twitchChannelAccessToken', twitchChannelAccessToken);
     },
     (newTwitchCallbackServerStatus, newTwitchCallbackServerPort) => {
       twitchCallbackServerStatus = newTwitchCallbackServerStatus;
@@ -39,25 +59,56 @@ export default function setupIPC(mainWindow: BrowserWindow) {
         twitchCallbackServerPort,
       );
     },
-    (newTwitchChatClientStatus) => {
-      twitchChatClientStatus = newTwitchChatClientStatus;
+    (newTwitchChatClientStatus, message) => {
+      twitchBotStatus = newTwitchChatClientStatus;
+      twitchBotStatusMessage = message;
+      mainWindow.webContents.send('twitchBotStatus', twitchBotStatus, message);
+    },
+    (newTwitchEventPubSubStatus, message) => {
+      twitchChannelStatus = newTwitchEventPubSubStatus;
+      twitchChannelStatusMessage = message;
       mainWindow.webContents.send(
-        'twitchChatClientStatus',
-        twitchChatClientStatus,
+        'twitchChannelStatus',
+        twitchChannelStatus,
+        message,
       );
     },
+    (newTwitchBotUserName) => {
+      twitchBotUserName = newTwitchBotUserName;
+      mainWindow.webContents.send('twitchBotUserName', twitchChannel);
+    },
+    (newTwitchChannel) => {
+      twitchChannel = newTwitchChannel;
+      mainWindow.webContents.send('twitchChannel', twitchChannel);
+    },
   );
-  twitch.startChatClient();
+  twitch.startChannel().then((success) => {
+    if (success) {
+      twitch.startBot();
+    }
+  });
 
-  ipcMain.removeAllListeners('getTwitchSettings');
-  ipcMain.handle('getTwitchSettings', () => twitchSettings);
-  ipcMain.removeAllListeners('setTwitchSettings');
+  ipcMain.removeAllListeners('getTwitchBotClient');
+  ipcMain.handle('getTwitchBotClient', () => twitchBotClient);
+  ipcMain.removeAllListeners('setTwitchBotClient');
   ipcMain.handle(
-    'setTwitchSettings',
-    (event, newTwitchSettings: TwitchSettings) => {
-      twitchSettings = newTwitchSettings;
-      store.set('twitchSettings', twitchSettings);
-      twitch.setTwitchSettings(twitchSettings);
+    'setTwitchBotClient',
+    (event, newTwitchBotClient: TwitchClient) => {
+      twitchBotClient = newTwitchBotClient;
+      store.set('twitchBotClient', twitchBotClient);
+      twitch.setTwitchClient(TwitchConnection.BOT, twitchBotClient);
+    },
+  );
+
+  ipcMain.removeAllListeners('getTwitchChannelClient');
+  ipcMain.handle('getTwitchChannelClient', () => twitchChannelClient);
+  ipcMain.removeAllListeners('setTwitchChannelClient');
+  ipcMain.handle(
+    'setTwitchChannelClient',
+    (event, newTwitchChannelClient: TwitchClient) => {
+      twitchChannelClient = newTwitchChannelClient;
+      store.set('twitchChannelClient', twitchChannelClient);
+      twitch.setTwitchClient(TwitchConnection.CHANNEL, twitchChannelClient);
     },
   );
 
@@ -67,12 +118,29 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     port: twitchCallbackServerPort,
   }));
 
-  ipcMain.removeAllListeners('getTwitchChatClientStatus');
-  ipcMain.handle('getTwitchChatClientStatus', () => twitchChatClientStatus);
+  ipcMain.removeAllListeners('getTwitchBotStatus');
+  ipcMain.handle('getTwitchBotStatus', () => ({
+    status: twitchBotStatus,
+    message: twitchBotStatusMessage,
+  }));
+
+  ipcMain.removeAllListeners('getTwitchChannelStatus');
+  ipcMain.handle('getTwitchChannelStatus', () => ({
+    status: twitchChannelStatus,
+    message: twitchChannelStatusMessage,
+  }));
+
+  ipcMain.removeAllListeners('getTwitchBotUserName');
+  ipcMain.handle('getTwitchBotUserName', () => twitchBotUserName);
+
+  ipcMain.removeAllListeners('getTwitchChannel');
+  ipcMain.handle('getTwitchChannel', () => twitchChannel);
 
   ipcMain.removeAllListeners('startTwitchCallbackServer');
-  ipcMain.handle('startTwitchCallbackServer', () =>
-    twitch.startCallbackServer(),
+  ipcMain.handle(
+    'startTwitchCallbackServer',
+    (event, twitchConnection: TwitchConnection) =>
+      twitch.startCallbackServer(twitchConnection),
   );
   ipcMain.removeAllListeners('stopTwitchCallbackServer');
   ipcMain.handle('stopTwitchCallbackServer', () => twitch.stopCallbackServer());

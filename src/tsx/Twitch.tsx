@@ -13,45 +13,240 @@ import {
 import { ContentCopy } from '@mui/icons-material';
 import {
   TwitchCallbackServerStatus,
-  TwitchSettings,
-  TwitchChatClientStatus,
+  TwitchClient,
+  TwitchConnection,
+  TwitchConnectionStatus,
 } from '../types';
 
+function SetupDialog({
+  connection,
+  client,
+  callbackServerStatus,
+  callbackUrl,
+  port,
+  open,
+  version,
+  setClient,
+}: {
+  connection: TwitchConnection;
+  client: TwitchClient;
+  callbackServerStatus: TwitchCallbackServerStatus;
+  callbackUrl: string;
+  port: number;
+  open: boolean;
+  version: string;
+  setClient: (twitchClient: TwitchClient) => Promise<void>;
+}) {
+  const [lastOpen, setLastOpen] = useState(false);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  useEffect(() => {
+    if (open && !lastOpen) {
+      setLastOpen(true);
+      setClientId(client.clientId);
+      setClientSecret(client.clientSecret);
+      window.electron.startTwitchCallbackServer(connection);
+    } else {
+      setLastOpen(false);
+    }
+  }, [client, open]);
+
+  const [abortOpen, setAbortOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Dialog
+      open={open}
+      onClose={() => {
+        if (
+          clientId !== client.clientId ||
+          clientSecret !== client.clientSecret
+        ) {
+          setAbortOpen(true);
+        } else {
+          window.electron.stopTwitchCallbackServer();
+        }
+      }}
+    >
+      <DialogTitle>
+        Twitch {connection === TwitchConnection.BOT && 'Bot'}
+        {connection === TwitchConnection.CHANNEL && 'Channel'} Setup
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing="8px">
+          <DialogContentText>
+            Create an application from the{' '}
+            <a
+              href="https://dev.twitch.tv/console/apps"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Twitch Developer Console
+            </a>
+            , using the following OAuth Redirect URL:
+          </DialogContentText>
+          <Stack alignItems="center" direction="row" spacing="8px">
+            <DialogContentText>{callbackUrl}</DialogContentText>
+            <Button
+              disabled={port === 0}
+              endIcon={
+                port === 0 ? <CircularProgress size="24px" /> : <ContentCopy />
+              }
+              onClick={() => {
+                navigator.clipboard.writeText(callbackUrl);
+                setCopied(true);
+                setTimeout(() => {
+                  setCopied(false);
+                }, 5000);
+              }}
+              variant="contained"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </Button>
+          </Stack>
+          <DialogContentText>
+            See example screenshots{' '}
+            <a
+              href={`https://github.com/jmlee337/techobot2/blob/${version}/src/docs/twitch.md`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              here
+            </a>
+            .
+          </DialogContentText>
+          <TextField
+            label="Client ID"
+            onChange={(event) => {
+              setClientId(event.target.value);
+            }}
+            size="small"
+            value={clientId}
+            variant="filled"
+          />
+          <TextField
+            label="Client Secret"
+            onChange={(event) => {
+              setClientSecret(event.target.value);
+            }}
+            size="small"
+            type="password"
+            value={clientSecret}
+            variant="filled"
+          />
+          <Button
+            disabled={
+              !clientId ||
+              !clientSecret ||
+              callbackServerStatus !== TwitchCallbackServerStatus.STARTED
+            }
+            endIcon={
+              callbackServerStatus === TwitchCallbackServerStatus.STARTING ? (
+                <CircularProgress size="24px" />
+              ) : undefined
+            }
+            onClick={async () => {
+              setClient({
+                clientId,
+                clientSecret,
+              });
+            }}
+            variant="contained"
+          >
+            {callbackServerStatus === TwitchCallbackServerStatus.STOPPED &&
+              'Error!'}
+            {callbackServerStatus === TwitchCallbackServerStatus.STARTING &&
+              'Loading'}
+            {callbackServerStatus === TwitchCallbackServerStatus.STARTED &&
+              'Save & Go!'}
+          </Button>
+          <Dialog open={abortOpen}>
+            <DialogTitle>
+              Abort Twitch {connection === TwitchConnection.BOT && 'Bot'}
+              {connection === TwitchConnection.CHANNEL && 'Channel'} Setup?
+            </DialogTitle>
+            <DialogActions>
+              <Button
+                onClick={() => {
+                  setAbortOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setAbortOpen(false);
+                  window.electron.stopTwitchCallbackServer();
+                }}
+              >
+                Abort
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Stack>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Twitch({ version }: { version: string }) {
+  const [channel, setChannel] = useState('');
+  const [botUserName, setBotUserName] = useState('');
   const [callbackServerStatus, setCallbackServerStatus] = useState(
     TwitchCallbackServerStatus.STOPPED,
   );
   const [port, setPort] = useState(0);
-  const [chatClientStatus, setChatClientStatus] = useState(
-    TwitchChatClientStatus.DISCONNECTED,
+  const [botStatus, setBotStatus] = useState(
+    TwitchConnectionStatus.DISCONNECTED,
   );
-  const [settings, setSettings] = useState<TwitchSettings>({
-    channel: '',
+  const [botStatusMessage, setBotStatusMessage] = useState('');
+  const [channelStatus, setChannelStatus] = useState(
+    TwitchConnectionStatus.DISCONNECTED,
+  );
+  const [channelStatusMessage, setChannelStatusMessage] = useState('');
+  const [botClient, setBotClient] = useState<TwitchClient>({
+    clientId: '',
+    clientSecret: '',
+  });
+  const [channelClient, setChannelClient] = useState<TwitchClient>({
     clientId: '',
     clientSecret: '',
   });
 
-  const [channel, setChannel] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-  const [open, setOpen] = useState(false);
+  const [botOpen, setBotOpen] = useState(false);
+  const [channelOpen, setChannelOpen] = useState(false);
 
   useEffect(() => {
     const inner = async () => {
       const callbackServerStatusPromise =
         window.electron.getTwitchCallbackServerStatus();
-      const chatClientStatusPromise =
-        window.electron.getTwitchChatClientStatus();
-      const settingsPromise = window.electron.getTwitchSettings();
+      const botStatusPromise = window.electron.getTwitchBotStatus();
+      const channelStatusPromise = window.electron.getTwitchChannelStatus();
+      const botClientPromise = window.electron.getTwitchBotClient();
+      const channelClientPromise = window.electron.getTwitchChannelClient();
+      const botUserNamePromise = window.electron.getTwitchBotUserName();
+      const channelPromise = window.electron.getTwitchChannel();
+
       const initialCallbackServerStatus = await callbackServerStatusPromise;
       setCallbackServerStatus(initialCallbackServerStatus.status);
       setPort(initialCallbackServerStatus.port);
-      setChatClientStatus(await chatClientStatusPromise);
-      const initialSettings = await settingsPromise;
-      setSettings(initialSettings);
-      setChannel(initialSettings.channel);
-      setClientId(initialSettings.clientId);
-      setClientSecret(initialSettings.clientSecret);
+
+      const initialBotStatus = await botStatusPromise;
+      setBotStatus(initialBotStatus.status);
+      setBotStatusMessage(initialBotStatus.message);
+
+      const initialChannelStatus = await channelStatusPromise;
+      setChannelStatus(initialChannelStatus.status);
+      setChannelStatusMessage(initialChannelStatus.message);
+
+      const initialBotClient = await botClientPromise;
+      setBotClient(initialBotClient);
+
+      const initialChannelClient = await channelClientPromise;
+      setChannelClient(initialChannelClient);
+
+      setBotUserName(await botUserNamePromise);
+      setChannel(await channelPromise);
     };
     inner();
   }, []);
@@ -61,186 +256,114 @@ export default function Twitch({ version }: { version: string }) {
         setCallbackServerStatus(newCallbackServerStatus);
         setPort(newPort);
         if (newCallbackServerStatus === TwitchCallbackServerStatus.STOPPED) {
-          setOpen(false);
+          setBotOpen(false);
+          setChannelOpen(false);
         }
       },
     );
-    window.electron.onTwitchChatClientStatus((event, newChatClientStatus) => {
-      setChatClientStatus(newChatClientStatus);
+    window.electron.onTwitchBotStatus(
+      (event, newBotStatus, newBotStatusMessage) => {
+        setBotStatus(newBotStatus);
+        setBotStatusMessage(newBotStatusMessage);
+      },
+    );
+    window.electron.onTwitchChannelStatus(
+      (event, newChannelStatus, newChannelStatusMessage) => {
+        setChannelStatus(newChannelStatus);
+        setChannelStatusMessage(newChannelStatusMessage);
+      },
+    );
+    window.electron.onTwitchBotUserName((event, newBotUserName) => {
+      setBotUserName(newBotUserName);
+    });
+    window.electron.onTwitchChannel((event, newChannel) => {
+      setChannel(newChannel);
     });
   }, []);
 
-  const [abortOpen, setAbortOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const callbackUrl = `http://localhost:${port}`;
 
   return (
-    <Stack alignItems="center" direction="row" spacing="8px">
-      <Button
-        onClick={() => {
-          window.electron.startTwitchCallbackServer();
-          setChannel(settings.channel);
-          setClientId(settings.clientId);
-          setClientSecret(settings.clientSecret);
-          setOpen(true);
-        }}
-        variant="contained"
-      >
-        {!channel || !clientId || !clientSecret ? 'SET UP' : 'CHANGE'}
-      </Button>
-      <DialogContentText>
-        Twitch Bot:{' '}
-        {chatClientStatus === TwitchChatClientStatus.DISCONNECTED &&
-          'DISCONNECTED'}
-        {chatClientStatus === TwitchChatClientStatus.CONNECTING &&
-          'CONNECTING...'}
-        {chatClientStatus === TwitchChatClientStatus.CONNECTED && 'CONNECTED'}
-      </DialogContentText>
-      <Dialog
-        open={open}
-        onClose={() => {
-          if (
-            channel !== settings.channel ||
-            clientId !== settings.clientId ||
-            clientSecret !== settings.clientSecret
-          ) {
-            setAbortOpen(true);
-          } else {
-            window.electron.stopTwitchCallbackServer();
-          }
-        }}
-      >
-        <DialogContent>
-          <Stack spacing="8px">
-            <DialogContentText>
-              Create an application from the{' '}
-              <a
-                href="https://dev.twitch.tv/console/apps"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Twitch Developer Console
-              </a>
-              , using the following OAuth Redirect URL:
-            </DialogContentText>
-            <Stack alignItems="center" direction="row" spacing="8px">
-              <DialogContentText>{callbackUrl}</DialogContentText>
-              <Button
-                disabled={port === 0}
-                endIcon={
-                  port === 0 ? (
-                    <CircularProgress size="24px" />
-                  ) : (
-                    <ContentCopy />
-                  )
-                }
-                onClick={() => {
-                  navigator.clipboard.writeText(callbackUrl);
-                  setCopied(true);
-                  setTimeout(() => {
-                    setCopied(false);
-                  }, 5000);
-                }}
-                variant="contained"
-              >
-                {copied ? 'Copied!' : 'Copy'}
-              </Button>
-            </Stack>
-            <DialogContentText>
-              See example screenshots{' '}
-              <a
-                href={`https://github.com/jmlee337/techobot2/blob/${version}/src/docs/twitch.md`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                here
-              </a>
-              .
-            </DialogContentText>
-            <TextField
-              label="Twitch channel"
-              onChange={(event) => {
-                setChannel(event.target.value);
-              }}
-              size="small"
-              value={channel}
-              variant="filled"
-            />
-            <TextField
-              label="Client ID"
-              onChange={(event) => {
-                setClientId(event.target.value);
-              }}
-              size="small"
-              value={clientId}
-              variant="filled"
-            />
-            <TextField
-              label="Client Secret"
-              onChange={(event) => {
-                setClientSecret(event.target.value);
-              }}
-              size="small"
-              type="password"
-              value={clientSecret}
-              variant="filled"
-            />
-            <Button
-              disabled={
-                !channel ||
-                !clientId ||
-                !clientSecret ||
-                callbackServerStatus !== TwitchCallbackServerStatus.STARTED
-              }
-              endIcon={
-                callbackServerStatus === TwitchCallbackServerStatus.STARTING ? (
-                  <CircularProgress size="24px" />
-                ) : undefined
-              }
-              onClick={async () => {
-                await window.electron.setTwitchSettings({
-                  channel,
-                  clientId,
-                  clientSecret,
-                });
-                setSettings({
-                  channel,
-                  clientId,
-                  clientSecret,
-                });
-              }}
-              variant="contained"
-            >
-              {callbackServerStatus === TwitchCallbackServerStatus.STOPPED &&
-                'Error!'}
-              {callbackServerStatus === TwitchCallbackServerStatus.STARTING &&
-                'Loading'}
-              {callbackServerStatus === TwitchCallbackServerStatus.STARTED &&
-                'Save & Go!'}
-            </Button>
-            <Dialog open={abortOpen}>
-              <DialogTitle>Abort Twitch Bot Setup?</DialogTitle>
-              <DialogActions>
-                <Button
-                  onClick={() => {
-                    setAbortOpen(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    setAbortOpen(false);
-                    window.electron.stopTwitchCallbackServer();
-                  }}
-                >
-                  Abort
-                </Button>
-              </DialogActions>
-            </Dialog>
-          </Stack>
-        </DialogContent>
-      </Dialog>
+    <Stack spacing="8px">
+      <Stack alignItems="center" direction="row" spacing="8px">
+        <Button
+          onClick={() => {
+            setChannelOpen(true);
+          }}
+          variant="contained"
+        >
+          {channel ? 'CHANGE' : 'SET UP'}
+        </Button>
+        <DialogContentText>
+          Channel{' '}
+          {channel ? (
+            <>
+              {channel}
+              {': '}
+              {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
+                'DISCONNECTED'}
+              {channelStatus === TwitchConnectionStatus.CONNECTING &&
+                'CONNECTING...'}
+              {channelStatus === TwitchConnectionStatus.CONNECTED &&
+                'CONNECTED'}
+            </>
+          ) : (
+            ': NONE'
+          )}
+        </DialogContentText>
+        <SetupDialog
+          connection={TwitchConnection.CHANNEL}
+          client={channelClient}
+          callbackServerStatus={callbackServerStatus}
+          callbackUrl={callbackUrl}
+          port={port}
+          open={channelOpen}
+          version={version}
+          setClient={async (newClient) => {
+            await window.electron.setTwitchChannelClient(newClient);
+            setChannelClient(newClient);
+          }}
+        />
+      </Stack>
+      <Stack alignItems="center" direction="row" spacing="8px">
+        <Button
+          onClick={() => {
+            setBotOpen(true);
+          }}
+          variant="contained"
+        >
+          {botUserName ? 'CHANGE' : 'SET UP'}
+        </Button>
+        <DialogContentText>
+          Bot{' '}
+          {botUserName ? (
+            <>
+              {botUserName}
+              {': '}
+              {botStatus === TwitchConnectionStatus.DISCONNECTED &&
+                'DISCONNECTED'}
+              {botStatus === TwitchConnectionStatus.CONNECTING &&
+                'CONNECTING...'}
+              {botStatus === TwitchConnectionStatus.CONNECTED && 'CONNECTED'}
+            </>
+          ) : (
+            ': NONE'
+          )}
+        </DialogContentText>
+        <SetupDialog
+          connection={TwitchConnection.BOT}
+          client={botClient}
+          callbackServerStatus={callbackServerStatus}
+          callbackUrl={callbackUrl}
+          port={port}
+          open={botOpen}
+          version={version}
+          setClient={async (newClient) => {
+            await window.electron.setTwitchBotClient(newClient);
+            setBotClient(newClient);
+          }}
+        />
+      </Stack>
     </Stack>
   );
 }
