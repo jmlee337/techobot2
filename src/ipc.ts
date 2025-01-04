@@ -82,6 +82,9 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
+  twitch.onRedemption((event) => {
+    console.log(`${event.rewardTitle}: ${event.rewardCost} points`);
+  });
   twitch.startChannel().then((success) => {
     if (success) {
       twitch.startBot();

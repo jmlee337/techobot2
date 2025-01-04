@@ -57,6 +57,7 @@
     "@twurple/api-call": "^7.2.1",
     "@twurple/auth": "^7.2.1",
     "@twurple/chat": "^7.2.1",
+    "@twurple/eventsub-base": "^7.2.1",
     "@twurple/eventsub-ws": "^7.2.1",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",

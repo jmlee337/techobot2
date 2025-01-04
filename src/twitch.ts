@@ -18,6 +18,7 @@ import { Server } from 'http';
 import { GracefulShutdownManager } from '@moebius/http-graceful-shutdown';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { ApiClient } from '@twurple/api';
+import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export default class Twitch {
   private botClient: TwitchClient;
@@ -46,6 +47,10 @@ export default class Twitch {
   private eventSubWsListener: EventSubWsListener | null;
   private server: Server | null;
   private serverConnection: TwitchConnection | null;
+  private userId: string;
+  private redemptionCallback:
+    | ((event: EventSubChannelRedemptionAddEvent) => void)
+    | null;
 
   constructor(
     botClient: TwitchClient,
@@ -83,6 +88,8 @@ export default class Twitch {
     this.eventSubWsListener = null;
     this.server = null;
     this.serverConnection = null;
+    this.userId = '';
+    this.redemptionCallback = null;
   }
 
   getPort() {
@@ -239,7 +246,8 @@ export default class Twitch {
     if (!tokenInfo.userName) {
       throw new Error('could not get bot user name');
     }
-    this.onBotUserName(tokenInfo.userName);
+    const botUserName = tokenInfo.userName;
+    this.onBotUserName(botUserName);
 
     if (!this.channel) {
       return false;
@@ -270,13 +278,20 @@ export default class Twitch {
       );
     });
     this.chatClient.onJoin((channel) => {
-      this.chatClient?.say(channel, 'hey chat');
+      this.chatClient?.say(
+        channel,
+        "I'm back! My memory is a bit foggy, what did I miss?",
+      );
     });
-    this.chatClient.onMessage((channel, user, text, msg) => {
-      if (text === '!techobot') {
+    this.chatClient.onMessage((channel, user, text) => {
+      const lowerText = text.toLowerCase();
+      if (
+        lowerText === '!techobot' ||
+        lowerText === '!techobot2' ||
+        lowerText === '!techobot 2' ||
+        lowerText.includes(`@${botUserName.toLowerCase()}`)
+      ) {
         this.chatClient?.say(channel, 'techobot2');
-      } else if (msg.isRedemption) {
-        this.chatClient?.say(channel, `rewardId: ${msg.rewardId}`);
       }
     });
     this.chatClient.connect();
@@ -314,7 +329,7 @@ export default class Twitch {
     if (!tokenInfo.userId) {
       throw new Error('could not get channel user id');
     }
-    const { userId } = tokenInfo;
+    this.userId = tokenInfo.userId;
 
     this.stopChannel();
     this.onChannelStatus(TwitchConnectionStatus.CONNECTING, '');
@@ -324,17 +339,17 @@ export default class Twitch {
       this.channelAccessToken = accessToken;
       this.setChannelAccessToken(this.channelAccessToken);
     });
-    await authProvider.addUserForToken(this.channelAccessToken, [
-      'user:read:chat',
-    ]);
+    await authProvider.addUserForToken(this.channelAccessToken);
 
     this.eventSubWsListener = new EventSubWsListener({
       apiClient: new ApiClient({ authProvider }),
     });
-    this.eventSubWsListener.onChannelChatMessage(userId, userId, (event) => {
-      console.log(event.messageText);
-      this.chatClient?.say(this.channel, 'message');
-    });
+    if (this.redemptionCallback) {
+      this.eventSubWsListener.onChannelRedemptionAdd(
+        this.userId,
+        this.redemptionCallback,
+      );
+    }
     this.eventSubWsListener.onUserSocketConnect(() => {
       this.onChannelStatus(TwitchConnectionStatus.CONNECTED, '');
     });
@@ -347,5 +362,15 @@ export default class Twitch {
     });
     this.eventSubWsListener.start();
     return true;
+  }
+
+  onRedemption(callback: (event: EventSubChannelRedemptionAddEvent) => void) {
+    this.redemptionCallback = callback;
+    if (this.eventSubWsListener) {
+      this.eventSubWsListener.onChannelRedemptionAdd(
+        this.userId,
+        this.redemptionCallback,
+      );
+    }
   }
 }
