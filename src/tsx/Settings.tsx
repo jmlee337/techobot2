@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import Twitch from './Twitch';
+import DDDice from './DDDice';
 
 export default function Settings() {
   const [version, setVersion] = useState('');
@@ -32,6 +33,7 @@ export default function Settings() {
         Settings
       </Button>
       <Dialog
+        fullWidth
         open={open}
         onClose={async () => {
           setOpen(false);
@@ -47,7 +49,10 @@ export default function Settings() {
           <Typography variant="caption">Techobot2 version {version}</Typography>
         </Stack>
         <DialogContent>
-          <Twitch version={version} />
+          <Stack spacing="16px">
+            <Twitch version={version} />
+            <DDDice />
+          </Stack>
         </DialogContent>
       </Dialog>
     </>

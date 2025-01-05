@@ -1,3 +1,13 @@
+export type DDDiceRoom = {
+  name: string;
+  slug: string;
+};
+
+export type DDDiceTheme = {
+  id: string;
+  name: string;
+};
+
 export enum TwitchCallbackServerStatus {
   STOPPED,
   STARTING,

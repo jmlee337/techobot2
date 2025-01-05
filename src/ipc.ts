@@ -8,14 +8,67 @@ import {
   TwitchConnection,
 } from './types';
 import { AccessToken } from '@twurple/auth';
+import DDDice from './dddice';
 
 export default function setupIPC(mainWindow: BrowserWindow) {
   const store = new Store<{
+    ddDiceApiKey: string;
+    ddDiceRoomSlug: string;
+    ddDiceThemeId: string;
     twitchBotClient: TwitchClient;
     twitchBotAccessToken: AccessToken;
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+  let ddDiceApiKey = store.has('ddDiceApiKey') ? store.get('ddDiceApiKey') : '';
+  let ddDiceRoomSlug = store.has('ddDiceRoomSlug')
+    ? store.get('ddDiceRoomSlug')
+    : '';
+  let ddDiceThemeId = store.has('ddDiceThemeId')
+    ? store.get('ddDiceThemeId')
+    : '';
+  const ddDice = new DDDice(ddDiceApiKey, ddDiceRoomSlug, ddDiceThemeId);
+
+  ipcMain.removeAllListeners('getDDDiceApiKey');
+  ipcMain.handle('getDDDiceApiKey', () => ddDiceApiKey);
+  ipcMain.removeAllListeners('setDDDiceApiKey');
+  ipcMain.handle('setDDDiceApiKey', async (event, newDDDiceApiKey: string) => {
+    const lists = await ddDice.setApiKey(newDDDiceApiKey);
+    store.set('ddDiceApiKey', newDDDiceApiKey);
+    ddDiceApiKey = newDDDiceApiKey;
+    return lists;
+  });
+
+  ipcMain.removeAllListeners('getDDDiceUsername');
+  ipcMain.handle('getDDDiceUsername', () => ddDice.getUsername());
+
+  ipcMain.removeAllListeners('getDDDiceRoomSlug');
+  ipcMain.handle('getDDDiceRoomSlug', () => ddDiceRoomSlug);
+  ipcMain.removeAllListeners('setDDDiceRoomSlug');
+  ipcMain.handle('setDDDiceRoomSlug', (event, newDDDiceRoomSlug: string) => {
+    ddDice.setRoomSlug(newDDDiceRoomSlug);
+    store.set('ddDiceRoomSlug', newDDDiceRoomSlug);
+    ddDiceRoomSlug = newDDDiceRoomSlug;
+  });
+
+  ipcMain.removeAllListeners('getDDDiceThemeId');
+  ipcMain.handle('getDDDiceThemeId', () => ddDiceThemeId);
+  ipcMain.removeAllListeners('setDDDiceThemeId');
+  ipcMain.handle('setDDDiceThemeId', (event, newDDDiceThemeId: string) => {
+    ddDice.setThemeId(newDDDiceThemeId);
+    store.set('ddDiceThemeId', newDDDiceThemeId);
+    ddDiceThemeId = newDDDiceThemeId;
+  });
+
+  ipcMain.removeAllListeners('getDDDiceRooms');
+  ipcMain.handle('getDDDiceRooms', () => ddDice.getRooms());
+
+  ipcMain.removeAllListeners('getDDDiceThemes');
+  ipcMain.handle('getDDDiceThemes', () => ddDice.getThemes());
+
+  ipcMain.removeAllListeners('ddDiceTestRoll');
+  ipcMain.handle('ddDiceTestRoll', () => ddDice.testRoll());
+
   let twitchBotClient = store.has('twitchBotClient')
     ? store.get('twitchBotClient')
     : { clientId: '', clientSecret: '' };

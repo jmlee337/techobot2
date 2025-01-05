@@ -295,9 +295,10 @@ export default function Twitch({ version }: { version: string }) {
           {channel ? 'CHANGE' : 'SET UP'}
         </Button>
         <DialogContentText>
-          Channel{' '}
+          Twitch Channel
           {channel ? (
             <>
+              {' '}
               {channel}
               {': '}
               {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
@@ -335,9 +336,10 @@ export default function Twitch({ version }: { version: string }) {
           {botUserName ? 'CHANGE' : 'SET UP'}
         </Button>
         <DialogContentText>
-          Bot{' '}
+          Twitch Bot
           {botUserName ? (
             <>
+              {' '}
               {botUserName}
               {': '}
               {botStatus === TwitchConnectionStatus.DISCONNECTED &&

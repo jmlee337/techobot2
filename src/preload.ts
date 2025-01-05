@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import {
+  DDDiceRoom,
+  DDDiceTheme,
   TwitchCallbackServerStatus,
   TwitchClient,
   TwitchConnection,
@@ -7,6 +9,24 @@ import {
 } from './types';
 
 const electronHandler = {
+  getDDDiceApiKey: (): Promise<string> => ipcRenderer.invoke('getDDDiceApiKey'),
+  setDDDiceApiKey: (ddDiceApiKey: string): Promise<string> =>
+    ipcRenderer.invoke('setDDDiceApiKey', ddDiceApiKey),
+  getDDDiceUsername: (): Promise<string> =>
+    ipcRenderer.invoke('getDDDiceUsername'),
+  getDDDiceRoomSlug: (): Promise<string> =>
+    ipcRenderer.invoke('getDDDiceRoomSlug'),
+  setDDDiceRoomSlug: (ddDiceRoomSlug: string): Promise<void> =>
+    ipcRenderer.invoke('setDDDiceRoomSlug', ddDiceRoomSlug),
+  getDDDiceThemeId: (): Promise<string> =>
+    ipcRenderer.invoke('getDDDiceThemeId'),
+  setDDDiceThemeId: (ddDiceThemeId: string): Promise<void> =>
+    ipcRenderer.invoke('setDDDiceThemeId', ddDiceThemeId),
+  getDDDiceRooms: (): Promise<DDDiceRoom[]> =>
+    ipcRenderer.invoke('getDDDiceRooms'),
+  getDDDiceThemes: (): Promise<DDDiceTheme[]> =>
+    ipcRenderer.invoke('getDDDiceThemes'),
+  ddDiceTestRoll: (): Promise<void> => ipcRenderer.invoke('ddDiceTestRoll'),
   getTwitchBotClient: (): Promise<TwitchClient> =>
     ipcRenderer.invoke('getTwitchBotClient'),
   setTwitchBotClient: (twitchClient: TwitchClient): Promise<void> =>
