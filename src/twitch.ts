@@ -1,8 +1,10 @@
 import {
   AccessToken,
+  accessTokenIsExpired,
   exchangeCode,
   getTokenInfo,
   RefreshingAuthProvider,
+  refreshUserToken,
 } from '@twurple/auth';
 import { ChatClient } from '@twurple/chat';
 import { shell } from 'electron';
@@ -239,6 +241,17 @@ export default class Twitch {
       return false;
     }
 
+    if (accessTokenIsExpired(this.botAccessToken)) {
+      if (!this.botAccessToken.refreshToken) {
+        throw new Error('no refresh token');
+      }
+      this.botAccessToken = await refreshUserToken(
+        this.botClient.clientId,
+        this.botClient.clientSecret,
+        this.botAccessToken.refreshToken,
+      );
+      this.setBotAccessToken(this.botAccessToken);
+    }
     const tokenInfo = await getTokenInfo(
       this.botAccessToken.accessToken,
       this.botClient.clientId,
@@ -248,6 +261,9 @@ export default class Twitch {
     }
     const botUserName = tokenInfo.userName;
     this.onBotUserName(botUserName);
+    if (!tokenInfo.userId) {
+      throw new Error('could not get bot user id');
+    }
 
     if (!this.channel) {
       return false;
@@ -261,7 +277,7 @@ export default class Twitch {
       this.botAccessToken = accessToken;
       this.setBotAccessToken(this.botAccessToken);
     });
-    await authProvider.addUserForToken(this.botAccessToken, ['chat']);
+    await authProvider.addUser(tokenInfo.userId, this.botAccessToken, ['chat']);
 
     this.chatClient = new ChatClient({
       authProvider,
@@ -317,6 +333,17 @@ export default class Twitch {
       return false;
     }
 
+    if (accessTokenIsExpired(this.channelAccessToken)) {
+      if (!this.channelAccessToken.refreshToken) {
+        throw new Error('no refresh token');
+      }
+      this.channelAccessToken = await refreshUserToken(
+        this.channelClient.clientId,
+        this.channelClient.clientSecret,
+        this.channelAccessToken.refreshToken,
+      );
+      this.setChannelAccessToken(this.channelAccessToken);
+    }
     const tokenInfo = await getTokenInfo(
       this.channelAccessToken.accessToken,
       this.channelClient.clientId,
@@ -339,7 +366,7 @@ export default class Twitch {
       this.channelAccessToken = accessToken;
       this.setChannelAccessToken(this.channelAccessToken);
     });
-    await authProvider.addUserForToken(this.channelAccessToken);
+    await authProvider.addUser(this.userId, this.channelAccessToken);
 
     this.eventSubWsListener = new EventSubWsListener({
       apiClient: new ApiClient({ authProvider }),
