@@ -109,10 +109,36 @@ export default class DDDice {
     this.themeId = themeId;
   }
 
+  async roll(type: string, mult: number) {
+    let dice: { type: string; theme: string }[];
+    if (type === 'd100') {
+      dice = new Array(mult * 2);
+      for (let i = 0; i < dice.length; i += 2) {
+        dice[i] = { type: 'd10x', theme: this.themeId };
+        dice[i + 1] = { type: 'd10', theme: this.themeId };
+      }
+    } else {
+      dice = new Array(mult).fill({
+        type,
+        theme: this.themeId,
+      });
+    }
+    const response = await this.fetchApi(
+      'https://dddice.com/api/1.0/roll',
+      'POST',
+      {
+        dice,
+        room: this.roomSlug,
+      },
+    );
+    const total = response.data.total_value;
+    const values = response.data.values.map(
+      (die: { value: number }) => die.value,
+    );
+    return `[${values.join(', ')}]: ${total} total`;
+  }
+
   async testRoll() {
-    await this.fetchApi('https://dddice.com/api/1.0/roll', 'POST', {
-      dice: [{ type: 'd20', theme: this.themeId }],
-      room: this.roomSlug,
-    });
+    await this.roll('d20', 1);
   }
 }

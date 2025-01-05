@@ -135,8 +135,49 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
-  twitch.onRedemption((event) => {
-    console.log(`${event.rewardTitle}: ${event.rewardCost} points`);
+  twitch.onRedemption(async (event) => {
+    console.log(
+      `${event.userId}: ${event.rewardTitle}: ${event.rewardCost} points`,
+    );
+    if (event.rewardId === 'b4073735-6948-474f-9d1c-c68798794d31') {
+      const inputLower = event.input.toLowerCase();
+      if (inputLower.match(/^[0-9]?[0-9]?d[0-9]?[0-9]?[0-9]$/)) {
+        const i = inputLower.indexOf('d');
+        const mult = i > 0 ? parseInt(inputLower.slice(0, i), 10) : 1;
+        const type = inputLower.slice(i);
+        if (
+          type !== 'd4' &&
+          type !== 'd6' &&
+          type !== 'd8' &&
+          type !== 'd10' &&
+          type !== 'd12' &&
+          type !== 'd20' &&
+          type !== 'd100'
+        ) {
+          twitch.say(
+            `Sorry @${event.userName}, I don't recongize that die type...`,
+          );
+          return;
+        }
+        if (mult < 1 || mult > 10) {
+          twitch.say(
+            `Whoa there @${event.userName}, let's keep it from 1 to 10 dice!`,
+          );
+          return;
+        }
+        try {
+          await ddDice.roll(type, mult);
+          twitch.say(`@${event.userName} rolled ${inputLower}!`);
+        } catch (e: unknown) {
+          twitch.say(`Rolling error!: ${e instanceof Error ? e.message : e}`);
+        }
+      } else {
+        twitch.say(
+          `Sorry @${event.userName}, I don't recognize that roll format...`,
+        );
+        return;
+      }
+    }
   });
   twitch.startChannel().then((success) => {
     if (success) {

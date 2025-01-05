@@ -173,7 +173,10 @@ export default class Twitch {
         } else if (twitchConnection === TwitchConnection.CHANNEL) {
           this.channelAccessToken = newAccessToken;
           this.setChannelAccessToken(this.channelAccessToken);
-          this.startChannel();
+          const started = await this.startChannel();
+          if (started) {
+            this.startBot();
+          }
         } else {
           throw new Error('unreachable');
         }
@@ -399,5 +402,9 @@ export default class Twitch {
         this.redemptionCallback,
       );
     }
+  }
+
+  say(text: string) {
+    this.chatClient?.say(this.channel, text);
   }
 }
