@@ -26,7 +26,8 @@ const electronHandler = {
     ipcRenderer.invoke('getDDDiceRooms'),
   getDDDiceThemes: (): Promise<DDDiceTheme[]> =>
     ipcRenderer.invoke('getDDDiceThemes'),
-  ddDiceTestRoll: (): Promise<void> => ipcRenderer.invoke('ddDiceTestRoll'),
+  ddDiceRoll: (roll: string): Promise<string> =>
+    ipcRenderer.invoke('ddDiceRoll', roll),
   getTwitchBotClient: (): Promise<TwitchClient> =>
     ipcRenderer.invoke('getTwitchBotClient'),
   setTwitchBotClient: (twitchClient: TwitchClient): Promise<void> =>

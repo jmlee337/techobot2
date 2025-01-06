@@ -6,9 +6,40 @@ import {
   TwitchConnectionStatus,
   TwitchClient,
   TwitchConnection,
+  ParsedRoll,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
+
+function parseRoll(roll: string): ParsedRoll {
+  const rollLower = roll.toLowerCase();
+  if (!rollLower.match(/^[0-9]?[0-9]?d[0-9]?[0-9]?[0-9]$/)) {
+    throw new Error("I don't recognize that roll format...");
+  }
+
+  const i = rollLower.indexOf('d');
+  const mult = i > 0 ? parseInt(rollLower.slice(0, i), 10) : 1;
+  const type = rollLower.slice(i);
+  if (
+    type !== 'd4' &&
+    type !== 'd6' &&
+    type !== 'd8' &&
+    type !== 'd10' &&
+    type !== 'd12' &&
+    type !== 'd20' &&
+    type !== 'd100'
+  ) {
+    throw new Error("I don't recongize that die type...");
+  }
+  if (mult < 1 || mult > 10) {
+    throw new Error("let's keep it from 1 to 10 dice!");
+  }
+
+  return {
+    mult,
+    type,
+  };
+}
 
 export default function setupIPC(mainWindow: BrowserWindow) {
   const store = new Store<{
@@ -67,7 +98,9 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('getDDDiceThemes', () => ddDice.getThemes());
 
   ipcMain.removeAllListeners('ddDiceTestRoll');
-  ipcMain.handle('ddDiceTestRoll', () => ddDice.testRoll());
+  ipcMain.handle('ddDiceRoll', (event, roll: string) =>
+    ddDice.roll(parseRoll(roll)),
+  );
 
   let twitchBotClient = store.has('twitchBotClient')
     ? store.get('twitchBotClient')
@@ -140,42 +173,20 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       `${event.userId}: ${event.rewardTitle}: ${event.rewardCost} points`,
     );
     if (event.rewardId === 'b4073735-6948-474f-9d1c-c68798794d31') {
-      const inputLower = event.input.toLowerCase();
-      if (inputLower.match(/^[0-9]?[0-9]?d[0-9]?[0-9]?[0-9]$/)) {
-        const i = inputLower.indexOf('d');
-        const mult = i > 0 ? parseInt(inputLower.slice(0, i), 10) : 1;
-        const type = inputLower.slice(i);
-        if (
-          type !== 'd4' &&
-          type !== 'd6' &&
-          type !== 'd8' &&
-          type !== 'd10' &&
-          type !== 'd12' &&
-          type !== 'd20' &&
-          type !== 'd100'
-        ) {
-          twitch.say(
-            `Sorry @${event.userName}, I don't recongize that die type...`,
-          );
-          return;
-        }
-        if (mult < 1 || mult > 10) {
-          twitch.say(
-            `Whoa there @${event.userName}, let's keep it from 1 to 10 dice!`,
-          );
-          return;
-        }
+      try {
+        const parsedRoll = parseRoll(event.input);
         try {
-          await ddDice.roll(type, mult);
-          twitch.say(`@${event.userName} rolled ${inputLower}!`);
+          await ddDice.roll(parsedRoll);
+          twitch.say(
+            `@${event.userName} rolled ${parsedRoll.mult}${parsedRoll.type}!`,
+          );
         } catch (e: unknown) {
           twitch.say(`Rolling error!: ${e instanceof Error ? e.message : e}`);
         }
-      } else {
-        twitch.say(
-          `Sorry @${event.userName}, I don't recognize that roll format...`,
-        );
-        return;
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          twitch.say(`Sorry @${event.userName}, ${e.message}`);
+        }
       }
     }
   });

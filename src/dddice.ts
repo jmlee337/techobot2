@@ -1,4 +1,4 @@
-import { DDDiceRoom, DDDiceTheme } from './types';
+import { DDDiceRoom, DDDiceTheme, ParsedRoll } from './types';
 
 export default class DDDice {
   private apiKey: string;
@@ -109,7 +109,7 @@ export default class DDDice {
     this.themeId = themeId;
   }
 
-  async roll(type: string, mult: number) {
+  async roll({ type, mult }: ParsedRoll) {
     let dice: { type: string; theme: string }[];
     if (type === 'd100') {
       dice = new Array(mult * 2);
@@ -136,9 +136,5 @@ export default class DDDice {
       (die: { value: number }) => die.value,
     );
     return `[${values.join(', ')}]: ${total} total`;
-  }
-
-  async testRoll() {
-    await this.roll('d20', 1);
   }
 }

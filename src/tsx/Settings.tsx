@@ -25,10 +25,11 @@ export default function Settings() {
   return (
     <>
       <Button
+        color="inherit"
         onClick={() => {
           setOpen(true);
         }}
-        variant="contained"
+        variant="text"
       >
         Settings
       </Button>

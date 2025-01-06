@@ -8,6 +8,11 @@ export type DDDiceTheme = {
   name: string;
 };
 
+export type ParsedRoll = {
+  mult: number;
+  type: string;
+};
+
 export enum TwitchCallbackServerStatus {
   STOPPED,
   STARTING,
