@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import {
+  DDDiceFetchStatus,
   DDDiceRoom,
   DDDiceTheme,
   TwitchCallbackServerStatus,
@@ -9,11 +10,10 @@ import {
 } from './types';
 
 const electronHandler = {
+  // dddice
   getDDDiceApiKey: (): Promise<string> => ipcRenderer.invoke('getDDDiceApiKey'),
-  setDDDiceApiKey: (ddDiceApiKey: string): Promise<string> =>
+  setDDDiceApiKey: (ddDiceApiKey: string): Promise<void> =>
     ipcRenderer.invoke('setDDDiceApiKey', ddDiceApiKey),
-  getDDDiceUsername: (): Promise<string> =>
-    ipcRenderer.invoke('getDDDiceUsername'),
   getDDDiceRoomSlug: (): Promise<string> =>
     ipcRenderer.invoke('getDDDiceRoomSlug'),
   setDDDiceRoomSlug: (ddDiceRoomSlug: string): Promise<void> =>
@@ -22,12 +22,57 @@ const electronHandler = {
     ipcRenderer.invoke('getDDDiceThemeId'),
   setDDDiceThemeId: (ddDiceThemeId: string): Promise<void> =>
     ipcRenderer.invoke('setDDDiceThemeId', ddDiceThemeId),
-  getDDDiceRooms: (): Promise<DDDiceRoom[]> =>
-    ipcRenderer.invoke('getDDDiceRooms'),
-  getDDDiceThemes: (): Promise<DDDiceTheme[]> =>
-    ipcRenderer.invoke('getDDDiceThemes'),
+  getDDDiceUsername: (): Promise<{
+    status: DDDiceFetchStatus;
+    username: string;
+    message: string;
+  }> => ipcRenderer.invoke('getDDDiceUsername'),
+  getDDDiceRooms: (): Promise<{
+    status: DDDiceFetchStatus;
+    rooms: DDDiceRoom[];
+    message: string;
+  }> => ipcRenderer.invoke('getDDDiceRooms'),
+  getDDDiceThemes: (): Promise<{
+    status: DDDiceFetchStatus;
+    themes: DDDiceTheme[];
+    message: string;
+  }> => ipcRenderer.invoke('getDDDiceThemes'),
   ddDiceRoll: (roll: string): Promise<string> =>
     ipcRenderer.invoke('ddDiceRoll', roll),
+  onDDDiceUsername: (
+    callback: (
+      event: IpcRendererEvent,
+      status: DDDiceFetchStatus,
+      username: string,
+      message: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('ddDiceUsername');
+    ipcRenderer.on('ddDiceUsername', callback);
+  },
+  onDDDiceRooms: (
+    callback: (
+      event: IpcRendererEvent,
+      status: DDDiceFetchStatus,
+      rooms: DDDiceRoom[],
+      message: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('ddDiceRooms');
+    ipcRenderer.on('ddDiceRooms', callback);
+  },
+  onDDDiceThemes: (
+    callback: (
+      event: IpcRendererEvent,
+      status: DDDiceFetchStatus,
+      themes: DDDiceTheme[],
+      message: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('ddDiceThemes');
+    ipcRenderer.on('ddDiceThemes', callback);
+  },
+  // twich
   getTwitchBotClient: (): Promise<TwitchClient> =>
     ipcRenderer.invoke('getTwitchBotClient'),
   setTwitchBotClient: (twitchClient: TwitchClient): Promise<void> =>

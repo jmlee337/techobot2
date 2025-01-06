@@ -94,6 +94,25 @@ export default class Twitch {
     this.redemptionCallback = null;
   }
 
+  async initialize() {
+    try {
+      const started = await this.startChannel();
+      if (started) {
+        try {
+          await this.startBot();
+        } catch (e: unknown) {
+          if (e instanceof Error) {
+            this.onBotStatus(TwitchConnectionStatus.DISCONNECTED, e.message);
+          }
+        }
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        this.onChannelStatus(TwitchConnectionStatus.DISCONNECTED, e.message);
+      }
+    }
+  }
+
   getPort() {
     if (!this.server) {
       return 0;

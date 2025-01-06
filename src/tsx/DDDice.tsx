@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DDDiceRoom, DDDiceTheme } from '../types';
+import { DDDiceFetchStatus, DDDiceRoom, DDDiceTheme } from '../types';
 import {
   Button,
   CircularProgress,
@@ -20,40 +20,103 @@ import { Check, Close } from '@mui/icons-material';
 
 export default function DDDice() {
   const [apiKey, setApiKey] = useState('');
-  const [apiKeyError, setApiKeyError] = useState('');
-  const [gettingUsername, setGettingUsername] = useState(true);
-  const [username, setUsername] = useState('');
   const [roomSlug, setRoomSlug] = useState('');
   const [themeId, setThemeId] = useState('');
 
+  const [username, setUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState(DDDiceFetchStatus.NONE);
+  const [usernameStatusMessage, setUsernameStatusMessage] = useState('');
+
+  const [rooms, setRooms] = useState<DDDiceRoom[]>([]);
+  const [roomsStatus, setRoomsStatus] = useState(DDDiceFetchStatus.NONE);
+  const [roomsStatusMessage, setRoomsStatusMessage] = useState('');
+
+  const [themes, setThemes] = useState<DDDiceTheme[]>([]);
+  const [themesStatus, setThemesStatus] = useState(DDDiceFetchStatus.NONE);
+  const [themesStatusMessage, setThemesStatusMessage] = useState('');
+
   useEffect(() => {
     const inner = async () => {
-      const usernamePromise = window.electron.getDDDiceUsername();
       const apiKeyPromise = window.electron.getDDDiceApiKey();
       const roomSlugPromise = window.electron.getDDDiceRoomSlug();
       const themeIdPromise = window.electron.getDDDiceThemeId();
+      const usernamePromise = window.electron.getDDDiceUsername();
+      const roomsPromise = window.electron.getDDDiceRooms();
+      const themesPromise = window.electron.getDDDiceThemes();
       setApiKey(await apiKeyPromise);
-      setRoomSlug(await roomSlugPromise);
-      setThemeId(await themeIdPromise);
-      try {
-        setUsername(await usernamePromise);
-      } catch (e: unknown) {
-        if (e instanceof Error) {
-          setApiKeyError(e.message);
+
+      const roomSlug = await roomSlugPromise;
+      setRoomSlug(roomSlug);
+
+      const themeId = await themeIdPromise;
+      setThemeId(themeId);
+
+      const initialUsername = await usernamePromise;
+      setUsername(initialUsername.username);
+      setUsernameStatus(initialUsername.status);
+      setUsernameStatusMessage(initialUsername.message);
+
+      const initialRooms = await roomsPromise;
+      setRooms(initialRooms.rooms);
+      setRoomsStatus(initialRooms.status);
+      setRoomsStatusMessage(initialRooms.message);
+      if (roomSlug && initialRooms.status === DDDiceFetchStatus.FETCHED) {
+        if (!initialRooms.rooms.find((room) => room.slug === roomSlug)) {
+          setRoomsStatus(DDDiceFetchStatus.NONE);
+          setRoomsStatusMessage('Invalid room selected');
         }
-      } finally {
-        setGettingUsername(false);
+      }
+
+      const initialThemes = await themesPromise;
+      setThemes(initialThemes.themes);
+      setThemesStatus(initialThemes.status);
+      setThemesStatusMessage(initialThemes.message);
+      if (themeId && initialThemes.status === DDDiceFetchStatus.FETCHED) {
+        if (!initialThemes.themes.find((theme) => theme.id === themeId)) {
+          setThemesStatus(DDDiceFetchStatus.NONE);
+          setThemesStatusMessage('Invalid theme selected');
+        }
       }
     };
     inner();
   }, []);
 
-  const [rooms, setRooms] = useState<DDDiceRoom[]>([]);
+  useEffect(() => {
+    window.electron.onDDDiceUsername((event, status, username, message) => {
+      setUsername(username);
+      setUsernameStatus(status);
+      setUsernameStatusMessage(message);
+    });
+  }, []);
+  useEffect(() => {
+    window.electron.onDDDiceRooms((event, status, rooms, message) => {
+      setRooms(rooms);
+      setRoomsStatus(status);
+      setRoomsStatusMessage(message);
+      if (roomSlug && status === DDDiceFetchStatus.FETCHED) {
+        if (!rooms.find((room) => room.slug === roomSlug)) {
+          setRoomsStatus(DDDiceFetchStatus.NONE);
+          setRoomsStatusMessage('Invalid room selected');
+        }
+      }
+    });
+  }, [roomSlug]);
+  useEffect(() => {
+    window.electron.onDDDiceThemes((event, status, themes, message) => {
+      setThemes(themes);
+      setThemesStatus(status);
+      setThemesStatusMessage(message);
+      if (themeId && status === DDDiceFetchStatus.FETCHED) {
+        if (!themes.find((theme) => theme.id === themeId)) {
+          setThemesStatus(DDDiceFetchStatus.NONE);
+          setThemesStatusMessage('Invalid theme selected');
+        }
+      }
+    });
+  }, [themeId]);
+
   const [roomsOpen, setRoomsOpen] = useState(false);
-  const [gettingRooms, setGettingRooms] = useState(false);
-  const [themes, setThemes] = useState<DDDiceTheme[]>([]);
   const [themesOpen, setThemesOpen] = useState(false);
-  const [gettingThemes, setGettingThemes] = useState(false);
   const [filter, setFilter] = useState('');
   const filterLower = filter.toLocaleLowerCase();
 
@@ -88,7 +151,10 @@ export default function DDDice() {
         onClick={async () => {
           await window.electron.setDDDiceRoomSlug(slug);
           setRoomSlug(slug);
+          setRoomsStatus(DDDiceFetchStatus.FETCHED);
+          setRoomsStatusMessage('');
           setRoomsOpen(false);
+          setFilter('');
         }}
       >
         {name} - {slug}
@@ -102,6 +168,8 @@ export default function DDDice() {
         onClick={async () => {
           await window.electron.setDDDiceThemeId(id);
           setThemeId(id);
+          setThemesStatus(DDDiceFetchStatus.FETCHED);
+          setThemesStatusMessage('');
           setThemesOpen(false);
           setFilter('');
         }}
@@ -125,33 +193,25 @@ export default function DDDice() {
         .
       </DialogContentText>
       <Stack alignItems="center" direction="row" spacing="8px">
-        {gettingUsername ? (
-          <CircularProgress size="24px" />
-        ) : username ? (
-          <Check color="success" />
-        ) : apiKeyError ? (
-          <Tooltip title={apiKeyError}>
+        {usernameStatus === DDDiceFetchStatus.NONE &&
+          (usernameStatusMessage ? (
+            <Tooltip title={usernameStatusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
             <Close color="error" />
-          </Tooltip>
-        ) : (
-          <Close color="error" />
+          ))}
+        {usernameStatus === DDDiceFetchStatus.FETCHING && (
+          <CircularProgress size="24px" />
+        )}
+        {usernameStatus === DDDiceFetchStatus.FETCHED && (
+          <Check color="success" />
         )}
         <form
           onSubmit={async (event) => {
             event.preventDefault();
             event.stopPropagation();
-            setGettingUsername(true);
-            try {
-              setUsername(await window.electron.setDDDiceApiKey(apiKey));
-              setApiKeyError('');
-            } catch (e: unknown) {
-              setUsername('');
-              if (e instanceof Error) {
-                setApiKeyError(e.message);
-              }
-            } finally {
-              setGettingUsername(false);
-            }
+            window.electron.setDDDiceApiKey(apiKey);
           }}
         >
           <TextField
@@ -166,24 +226,22 @@ export default function DDDice() {
         </form>
         {username && <DialogContentText>{username}</DialogContentText>}
       </Stack>
-      <Stack
-        alignItems="center"
-        direction="row"
-        paddingLeft="32px"
-        spacing="8px"
-      >
+      <Stack alignItems="center" direction="row" spacing="8px">
+        {roomsStatus === DDDiceFetchStatus.NONE &&
+          (roomsStatusMessage ? (
+            <Tooltip title={roomsStatusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
+            <Close color="error" />
+          ))}
+        {roomsStatus === DDDiceFetchStatus.FETCHING && (
+          <CircularProgress size="24px" />
+        )}
+        {roomsStatus === DDDiceFetchStatus.FETCHED && <Check color="success" />}
         <Button
           onClick={async () => {
             setRoomsOpen(true);
-            setGettingRooms(true);
-            try {
-              setRooms(await window.electron.getDDDiceRooms());
-            } catch (e: unknown) {
-              // error alert
-              setRoomsOpen(false);
-            } finally {
-              setGettingRooms(false);
-            }
           }}
           variant="contained"
         >
@@ -200,7 +258,7 @@ export default function DDDice() {
           <DialogTitle>Set dddice Room</DialogTitle>
           <DialogContent>
             {searchBox}
-            {gettingRooms ? (
+            {roomsStatus === DDDiceFetchStatus.FETCHING ? (
               <Stack direction="row" justifyContent="center" marginTop="8px">
                 <CircularProgress size="24px" />
               </Stack>
@@ -220,24 +278,24 @@ export default function DDDice() {
           </DialogContent>
         </Dialog>
       </Stack>
-      <Stack
-        alignItems="center"
-        direction="row"
-        paddingLeft="32px"
-        spacing="8px"
-      >
+      <Stack alignItems="center" direction="row" spacing="8px">
+        {themesStatus === DDDiceFetchStatus.NONE &&
+          (themesStatusMessage ? (
+            <Tooltip title={themesStatusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
+            <Close color="error" />
+          ))}
+        {themesStatus === DDDiceFetchStatus.FETCHING && (
+          <CircularProgress size="24px" />
+        )}
+        {themesStatus === DDDiceFetchStatus.FETCHED && (
+          <Check color="success" />
+        )}
         <Button
           onClick={async () => {
             setThemesOpen(true);
-            setGettingThemes(true);
-            try {
-              setThemes(await window.electron.getDDDiceThemes());
-            } catch (e: unknown) {
-              // error alert
-              setThemesOpen(false);
-            } finally {
-              setGettingThemes(false);
-            }
           }}
           variant="contained"
         >
@@ -255,7 +313,7 @@ export default function DDDice() {
           <DialogTitle>Set dddice Theme</DialogTitle>
           <DialogContent>
             {searchBox}
-            {gettingThemes ? (
+            {themesStatus === DDDiceFetchStatus.FETCHING ? (
               <Stack direction="row" justifyContent="center" marginTop="8px">
                 <CircularProgress size="24px" />
               </Stack>

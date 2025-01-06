@@ -1,17 +1,69 @@
-import { DDDiceRoom, DDDiceTheme, ParsedRoll } from './types';
+import {
+  DDDiceFetchStatus,
+  DDDiceRoom,
+  DDDiceTheme,
+  ParsedRoll,
+} from './types';
 
 export default class DDDice {
   private apiKey: string;
   private roomSlug: string;
   private themeId: string;
+  private onUsername: (
+    status: DDDiceFetchStatus,
+    username: string,
+    message: string,
+  ) => void;
+  private onRooms: (
+    status: DDDiceFetchStatus,
+    rooms: DDDiceRoom[],
+    message: string,
+  ) => void;
+  private onThemes: (
+    status: DDDiceFetchStatus,
+    themes: DDDiceTheme[],
+    message: string,
+  ) => void;
 
   private rooms: DDDiceRoom[];
   private themes: DDDiceTheme[];
 
-  constructor(apiKey: string, roomSlug: string, themeId: string) {
+  constructor(
+    apiKey: string,
+    roomSlug: string,
+    themeId: string,
+    onUsername: (
+      status: DDDiceFetchStatus,
+      username: string,
+      message: string,
+    ) => void,
+    onRooms: (
+      status: DDDiceFetchStatus,
+      rooms: DDDiceRoom[],
+      message: string,
+    ) => void,
+    onThemes: (
+      status: DDDiceFetchStatus,
+      themes: DDDiceTheme[],
+      message: string,
+    ) => void,
+  ) {
     this.apiKey = apiKey;
     this.roomSlug = roomSlug;
     this.themeId = themeId;
+    this.onUsername = onUsername;
+    this.onRooms = onRooms;
+    this.onThemes = onThemes;
+  }
+
+  async initialize() {
+    if (!this.apiKey) {
+      return;
+    }
+
+    this.getUsername();
+    this.getRooms();
+    this.getThemes();
   }
 
   async fetchApi(url: string, method: string, body?: object) {
@@ -37,55 +89,77 @@ export default class DDDice {
   }
 
   async getUsername() {
-    const usernameResponse = await this.fetchApi(
-      'https://dddice.com/api/1.0/user',
-      'GET',
-    );
-    return usernameResponse.data.username as string;
+    this.onUsername(DDDiceFetchStatus.FETCHING, '', '');
+    try {
+      const usernameResponse = await this.fetchApi(
+        'https://dddice.com/api/1.0/user',
+        'GET',
+      );
+      this.onUsername(
+        DDDiceFetchStatus.FETCHED,
+        usernameResponse.data.username,
+        '',
+      );
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '';
+      this.onUsername(DDDiceFetchStatus.NONE, '', message);
+    }
   }
 
   async getRooms() {
     let page = 1;
     let pages = -1;
     const rooms: DDDiceRoom[] = [];
-    do {
-      const roomsResponse = await this.fetchApi(
-        `https://dddice.com/api/1.0/room?page=${page}`,
-        'GET',
-      );
-      rooms.push(
-        ...roomsResponse.data.map((room: { name: string; slug: string }) => ({
-          name: room.name,
-          slug: room.slug,
-        })),
-      );
-      pages = roomsResponse.meta.to;
-      page++;
-    } while (page <= pages);
-    this.rooms = rooms;
-    return this.rooms;
+    this.onRooms(DDDiceFetchStatus.FETCHING, [], '');
+    try {
+      do {
+        const roomsResponse = await this.fetchApi(
+          `https://dddice.com/api/1.0/room?page=${page}`,
+          'GET',
+        );
+        rooms.push(
+          ...roomsResponse.data.map((room: { name: string; slug: string }) => ({
+            name: room.name,
+            slug: room.slug,
+          })),
+        );
+        pages = roomsResponse.meta.to;
+        page++;
+      } while (page <= pages);
+      this.rooms = rooms;
+      this.onRooms(DDDiceFetchStatus.FETCHED, rooms, '');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '';
+      this.onRooms(DDDiceFetchStatus.NONE, [], message);
+    }
   }
 
   async getThemes() {
     let page = 1;
     let pages = -1;
     const themes: DDDiceTheme[] = [];
-    do {
-      const themesResponse = await this.fetchApi(
-        `https://dddice.com/api/1.0/dice-box?page=${page}`,
-        'GET',
-      );
-      themes.push(
-        ...themesResponse.data.map((theme: { id: string; name: string }) => ({
-          id: theme.id,
-          name: theme.name,
-        })),
-      );
-      pages = themesResponse.meta.to;
-      page++;
-    } while (page <= pages);
-    this.themes = themes;
-    return this.themes;
+    this.onThemes(DDDiceFetchStatus.FETCHING, [], '');
+    try {
+      do {
+        const themesResponse = await this.fetchApi(
+          `https://dddice.com/api/1.0/dice-box?page=${page}`,
+          'GET',
+        );
+        themes.push(
+          ...themesResponse.data.map((theme: { id: string; name: string }) => ({
+            id: theme.id,
+            name: theme.name,
+          })),
+        );
+        pages = themesResponse.meta.to;
+        page++;
+      } while (page <= pages);
+      this.themes = themes;
+      this.onThemes(DDDiceFetchStatus.FETCHED, themes, '');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '';
+      this.onThemes(DDDiceFetchStatus.NONE, [], message);
+    }
   }
 
   setApiKey(apiKey: string) {
@@ -94,7 +168,9 @@ export default class DDDice {
     }
 
     this.apiKey = apiKey;
-    return this.getUsername();
+    this.getUsername();
+    this.getRooms();
+    this.getThemes();
   }
 
   setRoomSlug(roomSlug: string) {

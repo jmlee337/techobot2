@@ -7,6 +7,9 @@ import {
   TwitchClient,
   TwitchConnection,
   ParsedRoll,
+  DDDiceTheme,
+  DDDiceRoom,
+  DDDiceFetchStatus,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
@@ -58,20 +61,66 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   let ddDiceThemeId = store.has('ddDiceThemeId')
     ? store.get('ddDiceThemeId')
     : '';
-  const ddDice = new DDDice(ddDiceApiKey, ddDiceRoomSlug, ddDiceThemeId);
+  let ddDiceUsername = '';
+  let ddDiceUsernameStatus = DDDiceFetchStatus.NONE;
+  let ddDiceUsernameStatusMessage = '';
+  let ddDiceRooms: DDDiceRoom[] = [];
+  let ddDiceRoomsStatus = DDDiceFetchStatus.NONE;
+  let ddDiceRoomsStatusMessage = '';
+  let ddDiceThemes: DDDiceTheme[] = [];
+  let ddDiceThemesStatus = DDDiceFetchStatus.NONE;
+  let ddDiceThemesStatusMessage = '';
+  const ddDice = new DDDice(
+    ddDiceApiKey,
+    ddDiceRoomSlug,
+    ddDiceThemeId,
+    (status, username, message) => {
+      console.log(`username: ${status}, ${username}, ${message}`);
+      ddDiceUsernameStatus = status;
+      ddDiceUsername = username;
+      ddDiceUsernameStatusMessage = message;
+      mainWindow.webContents.send(
+        'ddDiceUsername',
+        ddDiceUsernameStatus,
+        ddDiceUsername,
+        ddDiceUsernameStatusMessage,
+      );
+    },
+    (status, rooms, message) => {
+      console.log(`rooms: ${status}, ${rooms}, ${message}`);
+      ddDiceRoomsStatus = status;
+      ddDiceRooms = rooms;
+      ddDiceRoomsStatusMessage = message;
+      mainWindow.webContents.send(
+        'ddDiceRooms',
+        ddDiceRoomsStatus,
+        ddDiceRooms,
+        ddDiceRoomsStatusMessage,
+      );
+    },
+    (status, themes, message) => {
+      console.log(`themes: ${status}, ${themes}, ${message}`);
+      ddDiceThemesStatus = status;
+      ddDiceThemes = themes;
+      ddDiceThemesStatusMessage = message;
+      mainWindow.webContents.send(
+        'ddDiceThemes',
+        ddDiceThemesStatus,
+        ddDiceThemes,
+        ddDiceThemesStatusMessage,
+      );
+    },
+  );
+  ddDice.initialize();
 
   ipcMain.removeAllListeners('getDDDiceApiKey');
   ipcMain.handle('getDDDiceApiKey', () => ddDiceApiKey);
   ipcMain.removeAllListeners('setDDDiceApiKey');
   ipcMain.handle('setDDDiceApiKey', async (event, newDDDiceApiKey: string) => {
-    const username = await ddDice.setApiKey(newDDDiceApiKey);
+    await ddDice.setApiKey(newDDDiceApiKey);
     store.set('ddDiceApiKey', newDDDiceApiKey);
     ddDiceApiKey = newDDDiceApiKey;
-    return username;
   });
-
-  ipcMain.removeAllListeners('getDDDiceUsername');
-  ipcMain.handle('getDDDiceUsername', () => ddDice.getUsername());
 
   ipcMain.removeAllListeners('getDDDiceRoomSlug');
   ipcMain.handle('getDDDiceRoomSlug', () => ddDiceRoomSlug);
@@ -91,13 +140,28 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     ddDiceThemeId = newDDDiceThemeId;
   });
 
+  ipcMain.removeAllListeners('getDDDiceUsername');
+  ipcMain.handle('getDDDiceUsername', () => ({
+    status: ddDiceUsernameStatus,
+    username: ddDiceUsername,
+    message: ddDiceUsernameStatusMessage,
+  }));
+
   ipcMain.removeAllListeners('getDDDiceRooms');
-  ipcMain.handle('getDDDiceRooms', () => ddDice.getRooms());
+  ipcMain.handle('getDDDiceRooms', () => ({
+    status: ddDiceRoomsStatus,
+    rooms: ddDiceRooms,
+    message: ddDiceRoomsStatusMessage,
+  }));
 
   ipcMain.removeAllListeners('getDDDiceThemes');
-  ipcMain.handle('getDDDiceThemes', () => ddDice.getThemes());
+  ipcMain.handle('getDDDiceThemes', () => ({
+    status: ddDiceThemesStatus,
+    themes: ddDiceThemes,
+    message: ddDiceThemesStatusMessage,
+  }));
 
-  ipcMain.removeAllListeners('ddDiceTestRoll');
+  ipcMain.removeAllListeners('ddDiceRoll');
   ipcMain.handle('ddDiceRoll', (event, roll: string) =>
     ddDice.roll(parseRoll(roll)),
   );
@@ -194,28 +258,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       }
     }
   });
-  twitch.startChannel().then(
-    (success) => {
-      if (success) {
-        twitch.startBot().catch((reason) => {
-          twitchBotStatusMessage = reason;
-          mainWindow.webContents.send(
-            'twitchBotStatus',
-            twitchBotStatus,
-            twitchBotStatusMessage,
-          );
-        });
-      }
-    },
-    (reason) => {
-      twitchChannelStatusMessage = reason;
-      mainWindow.webContents.send(
-        'twitchChannelStatus',
-        twitchChannelStatus,
-        twitchChannelStatusMessage,
-      );
-    },
-  );
+  twitch.initialize();
 
   ipcMain.removeAllListeners('getTwitchBotClient');
   ipcMain.handle('getTwitchBotClient', () => twitchBotClient);

@@ -8,6 +8,12 @@ export type DDDiceTheme = {
   name: string;
 };
 
+export enum DDDiceFetchStatus {
+  NONE,
+  FETCHING,
+  FETCHED,
+}
+
 export type ParsedRoll = {
   mult: number;
   type: string;
