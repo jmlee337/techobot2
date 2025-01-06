@@ -9,15 +9,14 @@ import {
 import { ChatClient } from '@twurple/chat';
 import { shell } from 'electron';
 import express from 'express';
-import { AddressInfo } from 'net';
+import { AddressInfo, Server } from 'net';
 import {
   TwitchCallbackServerStatus,
   TwitchConnectionStatus,
   TwitchClient,
   TwitchConnection,
 } from './types';
-import { Server } from 'http';
-import { GracefulShutdownManager } from '@moebius/http-graceful-shutdown';
+import GracefulShutdown from 'http-graceful-shutdown';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { ApiClient } from '@twurple/api';
 import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
@@ -130,11 +129,14 @@ export default class Twitch {
       return;
     }
 
-    new GracefulShutdownManager(this.server).terminate(() => {
-      this.server = null;
-      this.serverConnection = null;
-      this.onCallbackServerStatus(TwitchCallbackServerStatus.STOPPED, 0);
-    });
+    GracefulShutdown(this.server, {
+      finally: () => {
+        this.server = null;
+        this.serverConnection = null;
+        this.onCallbackServerStatus(TwitchCallbackServerStatus.STOPPED, 0);
+        console.log('server stopped');
+      },
+    })();
   }
 
   startCallbackServer(twitchConnection: TwitchConnection) {
