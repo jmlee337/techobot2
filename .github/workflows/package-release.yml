@@ -1,5 +1,7 @@
 name: Package Release
-on: [workflow_dispatch]
+on:
+  release:
+    types: [created]
 
 jobs:
   windows:
