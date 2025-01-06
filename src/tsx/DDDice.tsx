@@ -122,15 +122,6 @@ export default function DDDice() {
         .
       </DialogContentText>
       <Stack alignItems="center" direction="row" spacing="8px">
-        <Button
-          disabled={!username || !roomSlug || !themeId}
-          onClick={() => {
-            window.electron.ddDiceTestRoll();
-          }}
-          variant="contained"
-        >
-          Roll d20
-        </Button>
         <TextField
           label="dddice Api Key"
           onChange={async (event) => {
