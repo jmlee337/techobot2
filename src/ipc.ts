@@ -64,10 +64,10 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('getDDDiceApiKey', () => ddDiceApiKey);
   ipcMain.removeAllListeners('setDDDiceApiKey');
   ipcMain.handle('setDDDiceApiKey', async (event, newDDDiceApiKey: string) => {
-    const lists = await ddDice.setApiKey(newDDDiceApiKey);
+    const username = await ddDice.setApiKey(newDDDiceApiKey);
     store.set('ddDiceApiKey', newDDDiceApiKey);
     ddDiceApiKey = newDDDiceApiKey;
-    return lists;
+    return username;
   });
 
   ipcMain.removeAllListeners('getDDDiceUsername');
@@ -148,7 +148,11 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     (newTwitchChatClientStatus, message) => {
       twitchBotStatus = newTwitchChatClientStatus;
       twitchBotStatusMessage = message;
-      mainWindow.webContents.send('twitchBotStatus', twitchBotStatus, message);
+      mainWindow.webContents.send(
+        'twitchBotStatus',
+        twitchBotStatus,
+        twitchBotStatusMessage,
+      );
     },
     (newTwitchEventPubSubStatus, message) => {
       twitchChannelStatus = newTwitchEventPubSubStatus;
@@ -156,7 +160,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send(
         'twitchChannelStatus',
         twitchChannelStatus,
-        message,
+        twitchChannelStatusMessage,
       );
     },
     (newTwitchBotUserName) => {
@@ -190,11 +194,28 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       }
     }
   });
-  twitch.startChannel().then((success) => {
-    if (success) {
-      twitch.startBot();
-    }
-  });
+  twitch.startChannel().then(
+    (success) => {
+      if (success) {
+        twitch.startBot().catch((reason) => {
+          twitchBotStatusMessage = reason;
+          mainWindow.webContents.send(
+            'twitchBotStatus',
+            twitchBotStatus,
+            twitchBotStatusMessage,
+          );
+        });
+      }
+    },
+    (reason) => {
+      twitchChannelStatusMessage = reason;
+      mainWindow.webContents.send(
+        'twitchChannelStatus',
+        twitchChannelStatus,
+        twitchChannelStatusMessage,
+      );
+    },
+  );
 
   ipcMain.removeAllListeners('getTwitchBotClient');
   ipcMain.handle('getTwitchBotClient', () => twitchBotClient);

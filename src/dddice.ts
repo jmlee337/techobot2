@@ -29,7 +29,11 @@ export default class DDDice {
       headers,
       body: JSON.stringify(body),
     });
-    return response.json();
+    const json = await response.json();
+    if (json.type === 'error') {
+      throw new Error(json.data.message as string);
+    }
+    return json;
   }
 
   async getUsername() {
@@ -37,7 +41,7 @@ export default class DDDice {
       'https://dddice.com/api/1.0/user',
       'GET',
     );
-    return usernameResponse.data.username;
+    return usernameResponse.data.username as string;
   }
 
   async getRooms() {
@@ -46,7 +50,7 @@ export default class DDDice {
     const rooms: DDDiceRoom[] = [];
     do {
       const roomsResponse = await this.fetchApi(
-        'https://dddice.com/api/1.0/room?created=1',
+        `https://dddice.com/api/1.0/room?page=${page}`,
         'GET',
       );
       rooms.push(

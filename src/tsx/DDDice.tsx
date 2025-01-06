@@ -8,6 +8,7 @@ import {
   DialogContentText,
   DialogTitle,
   IconButton,
+  Link,
   List,
   ListItem,
   ListItemButton,
@@ -15,11 +16,11 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material';
-import { Close, Error } from '@mui/icons-material';
+import { Check, Close } from '@mui/icons-material';
 
 export default function DDDice() {
   const [apiKey, setApiKey] = useState('');
-  const [apiKeyError, setApiKeyError] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState('');
   const [gettingUsername, setGettingUsername] = useState(true);
   const [username, setUsername] = useState('');
   const [roomSlug, setRoomSlug] = useState('');
@@ -36,8 +37,10 @@ export default function DDDice() {
       setThemeId(await themeIdPromise);
       try {
         setUsername(await usernamePromise);
-      } catch {
-        setApiKeyError(true);
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          setApiKeyError(e.message);
+        }
       } finally {
         setGettingUsername(false);
       }
@@ -110,48 +113,65 @@ export default function DDDice() {
 
   return (
     <Stack spacing="8px">
-      <DialogContentText>
+      <DialogContentText paddingLeft="32px">
         Get your API key from the{' '}
-        <a
+        <Link
           href="https://dddice.com/account/developer"
           target="_blank"
           rel="noreferrer"
         >
           dddice Developer Console
-        </a>
+        </Link>
         .
       </DialogContentText>
       <Stack alignItems="center" direction="row" spacing="8px">
-        <TextField
-          label="dddice Api Key"
-          onChange={async (event) => {
-            const newApiKey = event.target.value;
-            setApiKey(newApiKey);
+        {gettingUsername ? (
+          <CircularProgress size="24px" />
+        ) : username ? (
+          <Check color="success" />
+        ) : apiKeyError ? (
+          <Tooltip title={apiKeyError}>
+            <Close color="error" />
+          </Tooltip>
+        ) : (
+          <Close color="error" />
+        )}
+        <form
+          onSubmit={async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             setGettingUsername(true);
             try {
-              setUsername(await window.electron.setDDDiceApiKey(newApiKey));
-              setApiKeyError(false);
-            } catch {
-              setApiKeyError(true);
+              setUsername(await window.electron.setDDDiceApiKey(apiKey));
+              setApiKeyError('');
+            } catch (e: unknown) {
+              setUsername('');
+              if (e instanceof Error) {
+                setApiKeyError(e.message);
+              }
             } finally {
               setGettingUsername(false);
             }
           }}
-          size="small"
-          value={apiKey}
-        />
-        {apiKey &&
-          (gettingUsername ? (
-            <CircularProgress size="24px" />
-          ) : apiKeyError ? (
-            <Tooltip title="Check dddice API Key">
-              <Error />
-            </Tooltip>
-          ) : (
-            <DialogContentText>{username}</DialogContentText>
-          ))}
+        >
+          <TextField
+            label="dddice Api Key"
+            onChange={async (event) => {
+              setApiKey(event.target.value);
+            }}
+            size="small"
+            type="password"
+            value={apiKey}
+          />
+        </form>
+        {username && <DialogContentText>{username}</DialogContentText>}
       </Stack>
-      <Stack alignItems="center" direction="row" spacing="8px">
+      <Stack
+        alignItems="center"
+        direction="row"
+        paddingLeft="32px"
+        spacing="8px"
+      >
         <Button
           onClick={async () => {
             setRoomsOpen(true);
@@ -200,7 +220,12 @@ export default function DDDice() {
           </DialogContent>
         </Dialog>
       </Stack>
-      <Stack alignItems="center" direction="row" spacing="8px">
+      <Stack
+        alignItems="center"
+        direction="row"
+        paddingLeft="32px"
+        spacing="8px"
+      >
         <Button
           onClick={async () => {
             setThemesOpen(true);

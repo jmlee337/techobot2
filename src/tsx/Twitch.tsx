@@ -7,10 +7,12 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Link,
   Stack,
   TextField,
+  Tooltip,
 } from '@mui/material';
-import { ContentCopy } from '@mui/icons-material';
+import { Cancel, Check, Close, ContentCopy } from '@mui/icons-material';
 import {
   TwitchCallbackServerStatus,
   TwitchClient,
@@ -25,7 +27,6 @@ function SetupDialog({
   callbackUrl,
   port,
   open,
-  version,
   setClient,
 }: {
   connection: TwitchConnection;
@@ -34,7 +35,6 @@ function SetupDialog({
   callbackUrl: string;
   port: number;
   open: boolean;
-  version: string;
   setClient: (twitchClient: TwitchClient) => Promise<void>;
 }) {
   const [lastOpen, setLastOpen] = useState(false);
@@ -76,13 +76,13 @@ function SetupDialog({
         <Stack spacing="8px">
           <DialogContentText>
             Create an application from the{' '}
-            <a
+            <Link
               href="https://dev.twitch.tv/console/apps"
               target="_blank"
               rel="noreferrer"
             >
               Twitch Developer Console
-            </a>
+            </Link>
             , using the following OAuth Redirect URL:
           </DialogContentText>
           <Stack alignItems="center" direction="row" spacing="8px">
@@ -106,13 +106,13 @@ function SetupDialog({
           </Stack>
           <DialogContentText>
             See example screenshots{' '}
-            <a
-              href={`https://github.com/jmlee337/techobot2/blob/${version}/src/docs/twitch.md`}
+            <Link
+              href={`https://github.com/jmlee337/techobot2/blob/src/docs/twitch.md`}
               target="_blank"
               rel="noreferrer"
             >
               here
-            </a>
+            </Link>
             .
           </DialogContentText>
           <TextField
@@ -189,7 +189,7 @@ function SetupDialog({
   );
 }
 
-export default function Twitch({ version }: { version: string }) {
+export default function Twitch() {
   const [channel, setChannel] = useState('');
   const [botUserName, setBotUserName] = useState('');
   const [callbackServerStatus, setCallbackServerStatus] = useState(
@@ -286,31 +286,33 @@ export default function Twitch({ version }: { version: string }) {
   return (
     <Stack spacing="8px">
       <Stack alignItems="center" direction="row" spacing="8px">
+        {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
+          (channelStatusMessage ? (
+            <Tooltip title={channelStatusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
+            <Close color="error" />
+          ))}
+        {channelStatus === TwitchConnectionStatus.CONNECTING && (
+          <CircularProgress size="24px" />
+        )}
+        {channelStatus === TwitchConnectionStatus.CONNECTED && (
+          <Check color="success" />
+        )}
         <Button
           onClick={() => {
             setChannelOpen(true);
           }}
           variant="contained"
         >
-          {channel ? 'CHANGE' : 'SET UP'}
+          {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
+          !channelStatusMessage
+            ? 'SET UP'
+            : 'CHANGE'}
         </Button>
         <DialogContentText>
-          Twitch Channel
-          {channel ? (
-            <>
-              {' '}
-              {channel}
-              {': '}
-              {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
-                'DISCONNECTED'}
-              {channelStatus === TwitchConnectionStatus.CONNECTING &&
-                'CONNECTING...'}
-              {channelStatus === TwitchConnectionStatus.CONNECTED &&
-                'CONNECTED'}
-            </>
-          ) : (
-            ': NONE'
-          )}
+          Twitch Channel: {channel ? channel : 'NONE'}
         </DialogContentText>
         <SetupDialog
           connection={TwitchConnection.CHANNEL}
@@ -319,7 +321,6 @@ export default function Twitch({ version }: { version: string }) {
           callbackUrl={callbackUrl}
           port={port}
           open={channelOpen}
-          version={version}
           setClient={async (newClient) => {
             await window.electron.setTwitchChannelClient(newClient);
             setChannelClient(newClient);
@@ -327,30 +328,33 @@ export default function Twitch({ version }: { version: string }) {
         />
       </Stack>
       <Stack alignItems="center" direction="row" spacing="8px">
+        {botStatus === TwitchConnectionStatus.DISCONNECTED &&
+          (botStatusMessage ? (
+            <Tooltip title={botStatusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
+            <Close color="error" />
+          ))}
+        {botStatus === TwitchConnectionStatus.CONNECTING && (
+          <CircularProgress size="24px" />
+        )}
+        {botStatus === TwitchConnectionStatus.CONNECTED && (
+          <Check color="success" />
+        )}
         <Button
           onClick={() => {
             setBotOpen(true);
           }}
           variant="contained"
         >
-          {botUserName ? 'CHANGE' : 'SET UP'}
+          {botStatus === TwitchConnectionStatus.DISCONNECTED &&
+          !botStatusMessage
+            ? 'SET UP'
+            : 'CHANGE'}
         </Button>
         <DialogContentText>
-          Twitch Bot
-          {botUserName ? (
-            <>
-              {' '}
-              {botUserName}
-              {': '}
-              {botStatus === TwitchConnectionStatus.DISCONNECTED &&
-                'DISCONNECTED'}
-              {botStatus === TwitchConnectionStatus.CONNECTING &&
-                'CONNECTING...'}
-              {botStatus === TwitchConnectionStatus.CONNECTED && 'CONNECTED'}
-            </>
-          ) : (
-            ': NONE'
-          )}
+          Twitch Bot: {botUserName ? botUserName : 'NONE'}
         </DialogContentText>
         <SetupDialog
           connection={TwitchConnection.BOT}
@@ -359,7 +363,6 @@ export default function Twitch({ version }: { version: string }) {
           callbackUrl={callbackUrl}
           port={port}
           open={botOpen}
-          version={version}
           setClient={async (newClient) => {
             await window.electron.setTwitchBotClient(newClient);
             setBotClient(newClient);
