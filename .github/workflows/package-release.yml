@@ -18,7 +18,7 @@ jobs:
       - name: npm run make
         run: npm run make
       - name: create release and upload
-      - uses: d1ceward/release-upload-action@v4.0.0
+        uses: d1ceward/release-upload-action@v4.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
