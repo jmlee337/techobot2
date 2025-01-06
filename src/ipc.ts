@@ -75,7 +75,6 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     ddDiceRoomSlug,
     ddDiceThemeId,
     (status, username, message) => {
-      console.log(`username: ${status}, ${username}, ${message}`);
       ddDiceUsernameStatus = status;
       ddDiceUsername = username;
       ddDiceUsernameStatusMessage = message;
@@ -87,7 +86,6 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       );
     },
     (status, rooms, message) => {
-      console.log(`rooms: ${status}, ${rooms}, ${message}`);
       ddDiceRoomsStatus = status;
       ddDiceRooms = rooms;
       ddDiceRoomsStatusMessage = message;
@@ -99,7 +97,6 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       );
     },
     (status, themes, message) => {
-      console.log(`themes: ${status}, ${themes}, ${message}`);
       ddDiceThemesStatus = status;
       ddDiceThemes = themes;
       ddDiceThemesStatusMessage = message;

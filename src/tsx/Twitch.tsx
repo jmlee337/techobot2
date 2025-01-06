@@ -12,7 +12,7 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material';
-import { Cancel, Check, Close, ContentCopy } from '@mui/icons-material';
+import { Check, Close, ContentCopy } from '@mui/icons-material';
 import {
   TwitchCallbackServerStatus,
   TwitchClient,
