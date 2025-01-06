@@ -19,9 +19,9 @@ jobs:
         run: npm install
       - name: npm run make
         run: npm run make
-      - name: upload to release
-        uses: Shopify/upload-to-release@v2.0.0
+      - name: create release and upload
+      - uses: d1ceward/release-upload-action@v4.0.0
         with:
-          name: windows
-          path: ./out/make/squirrel.windows/x64/*Setup.exe
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ./out/make/squirrel.windows/x64/techobot2-${{github.ref_name}} Setup.exe
