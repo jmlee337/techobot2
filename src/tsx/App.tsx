@@ -1,7 +1,8 @@
-import { AppBar, Grid2, Toolbar, Typography } from '@mui/material';
+import { AppBar, Grid2, Stack, Toolbar, Typography } from '@mui/material';
 import Settings from './Settings';
 import ManualRoll from './ManualRoll';
 import { useEffect, useState } from 'react';
+import Greetings from './Greetings';
 
 export default function App() {
   const [version, setVersion] = useState('');
@@ -24,7 +25,10 @@ export default function App() {
       </AppBar>
       <Grid2 container padding="8px" spacing={8}>
         <Grid2 size={4}>
-          <ManualRoll />
+          <Stack spacing="8px">
+            <ManualRoll />
+            <Greetings />
+          </Stack>
         </Grid2>
         <Grid2 size={8}>
           <Settings />

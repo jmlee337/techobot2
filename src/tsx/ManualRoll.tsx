@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   CircularProgress,
   Stack,
@@ -49,11 +50,13 @@ export default function ManualRoll() {
         >
           Roll!
         </Button>
+      </Stack>
+      <Box style={{ minHeight: '20px' }}>
         <Typography color={error ? 'error' : undefined} variant="caption">
           {result}
           {error}
         </Typography>
-      </Stack>
+      </Box>
     </form>
   );
 }

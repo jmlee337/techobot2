@@ -40,3 +40,9 @@ export type TwitchClient = {
   clientId: string;
   clientSecret: string;
 };
+
+export type Greeting = {
+  userId: string;
+  userName: string;
+  greeting: string;
+};

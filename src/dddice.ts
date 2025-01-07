@@ -214,7 +214,14 @@ export default class DDDice {
     const total = response.data.total_value;
     const values = response.data.values.map(
       (die: { value: number }) => die.value,
-    );
+    ) as number[];
+    if (type === 'd100') {
+      const fixedValues: string[] = [];
+      for (let i = 0; i < values.length; i += 2) {
+        fixedValues.push(`[${values[i]}, ${values[i + 1]}]`);
+      }
+      return `${fixedValues.join(', ')}: ${total} total`;
+    }
     return `[${values.join(', ')}]: ${total} total`;
   }
 }

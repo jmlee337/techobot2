@@ -13,6 +13,7 @@ import {
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
+import Greetings from './greetings';
 
 function parseRoll(roll: string): ParsedRoll {
   const rollLower = roll.toLowerCase();
@@ -54,6 +55,34 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+
+  // greetings
+  const greetings = new Greetings();
+  ipcMain.removeAllListeners('listGreetings');
+  ipcMain.handle('listGreetings', () => greetings.listGreetings());
+
+  ipcMain.removeAllListeners('setGreeting');
+  ipcMain.handle(
+    'setGreeting',
+    (event, userId: string, userName: string, greeting: string) => {
+      greetings.setGreeting(userId, userName, greeting);
+    },
+  );
+
+  ipcMain.removeAllListeners('updateGreeting');
+  ipcMain.handle(
+    'updateGreeting',
+    (event, userId: string, greeting: string) => {
+      greetings.updateGreeting(userId, greeting);
+    },
+  );
+
+  ipcMain.removeAllListeners('deleteGreeting');
+  ipcMain.handle('deleteGreeting', (event, userId: string) => {
+    greetings.deleteGreeting(userId);
+  });
+
+  // dddice
   let ddDiceApiKey = store.has('ddDiceApiKey') ? store.get('ddDiceApiKey') : '';
   let ddDiceRoomSlug = store.has('ddDiceRoomSlug')
     ? store.get('ddDiceRoomSlug')
@@ -163,6 +192,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     ddDice.roll(parseRoll(roll)),
   );
 
+  // twitch
   let twitchBotClient = store.has('twitchBotClient')
     ? store.get('twitchBotClient')
     : { clientId: '', clientSecret: '' };
@@ -235,7 +265,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   );
   twitch.onRedemption(async (event) => {
     console.log(
-      `${event.userId}: ${event.rewardTitle}: ${event.rewardCost} points`,
+      `${event.rewardId}: ${event.rewardTitle}: ${event.rewardCost} points`,
     );
     if (event.rewardId === 'b4073735-6948-474f-9d1c-c68798794d31') {
       try {
@@ -253,6 +283,15 @@ export default function setupIPC(mainWindow: BrowserWindow) {
           twitch.say(`Sorry @${event.userName}, ${e.message}`);
         }
       }
+    } else if (event.rewardId === '6122c2f8-f553-40bc-b58b-22beabf295a8') {
+      greetings.setGreeting(event.userId, event.userName, event.input);
+      twitch.say(`@${event.userName} added a welcome message!`);
+    }
+  });
+  twitch.onSeen((userId) => {
+    const greeting = greetings.getGreeting(userId);
+    if (greeting) {
+      twitch.say(`@${greeting.userName} ${greeting.greeting}`);
     }
   });
   twitch.initialize();
@@ -313,6 +352,14 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   );
   ipcMain.removeAllListeners('stopTwitchCallbackServer');
   ipcMain.handle('stopTwitchCallbackServer', () => twitch.stopCallbackServer());
+
+  ipcMain.removeAllListeners('getTwichUserId');
+  ipcMain.handle('getTwitchUserId', (event, userName: string) =>
+    twitch.getUserId(userName),
+  );
+
+  ipcMain.removeAllListeners('getTwitchChatters');
+  ipcMain.handle('getTwitchChatters', () => twitch.getChatters());
 
   ipcMain.handle('getVersion', app.getVersion);
 }

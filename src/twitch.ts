@@ -43,6 +43,7 @@ export default class Twitch {
   private onBotUserName: (botUserName: string) => void;
   private onChannel: (channel: string) => void;
 
+  private apiClient: ApiClient | null;
   private channel: string;
   private chatClient: ChatClient | null;
   private eventSubWsListener: EventSubWsListener | null;
@@ -52,6 +53,8 @@ export default class Twitch {
   private redemptionCallback:
     | ((event: EventSubChannelRedemptionAddEvent) => void)
     | null;
+  private onSeenCallback: ((userId: string) => void) | null;
+  private seenUserIdToUserName: Map<string, string>;
 
   constructor(
     botClient: TwitchClient,
@@ -84,6 +87,7 @@ export default class Twitch {
     this.onBotUserName = onBotUserName;
     this.onChannel = onChannel;
 
+    this.apiClient = null;
     this.channel = '';
     this.chatClient = null;
     this.eventSubWsListener = null;
@@ -91,6 +95,8 @@ export default class Twitch {
     this.serverConnection = null;
     this.userId = '';
     this.redemptionCallback = null;
+    this.onSeenCallback = null;
+    this.seenUserIdToUserName = new Map();
   }
 
   async initialize() {
@@ -241,7 +247,7 @@ export default class Twitch {
         throw new Error('must start callback server.');
       }
       shell.openExternal(
-        `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClient.clientId}&redirect_uri=http://localhost:${port}&response_type=code&scope=chat:read+chat:edit+channel:manage:redemptions`,
+        `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClient.clientId}&redirect_uri=http://localhost:${port}&response_type=code&scope=chat:read+chat:edit+channel:manage:redemptions+moderator:read:chatters`,
       );
     }
   }
@@ -323,7 +329,17 @@ export default class Twitch {
         "I'm back! My memory is a bit foggy, what did I miss?",
       );
     });
-    this.chatClient.onMessage((channel, user, text) => {
+    this.chatClient.onMessage((channel, user, text, msg) => {
+      const { userId } = msg.userInfo;
+      if (!this.seenUserIdToUserName.has(userId)) {
+        this.seenUserIdToUserName.set(
+          msg.userInfo.userId,
+          msg.userInfo.userName,
+        );
+        if (this.onSeenCallback) {
+          this.onSeenCallback(userId);
+        }
+      }
       const lowerText = text.toLowerCase();
       if (
         lowerText === '!techobot' ||
@@ -392,8 +408,9 @@ export default class Twitch {
     });
     await authProvider.addUser(this.userId, this.channelAccessToken);
 
+    this.apiClient = new ApiClient({ authProvider });
     this.eventSubWsListener = new EventSubWsListener({
-      apiClient: new ApiClient({ authProvider }),
+      apiClient: this.apiClient,
     });
     if (this.redemptionCallback) {
       this.eventSubWsListener.onChannelRedemptionAdd(
@@ -425,7 +442,31 @@ export default class Twitch {
     }
   }
 
+  onSeen(callback: (userId: string) => void) {
+    this.onSeenCallback = callback;
+  }
+
   say(text: string) {
     this.chatClient?.say(this.channel, text);
+  }
+
+  getChatters() {
+    return Array.from(this.seenUserIdToUserName).map(([userId, userName]) => ({
+      userId,
+      userName,
+    }));
+  }
+
+  async getUserId(userName: string) {
+    if (!this.apiClient) {
+      throw new Error('no api client');
+    }
+
+    const user = await this.apiClient.users.getUserByName(userName);
+    if (!user) {
+      throw new Error('user not found');
+    }
+
+    return user.id;
   }
 }

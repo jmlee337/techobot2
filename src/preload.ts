@@ -3,6 +3,7 @@ import {
   DDDiceFetchStatus,
   DDDiceRoom,
   DDDiceTheme,
+  Greeting,
   TwitchCallbackServerStatus,
   TwitchClient,
   TwitchConnection,
@@ -10,6 +11,19 @@ import {
 } from './types';
 
 const electronHandler = {
+  // greetings
+  listGreetings: (): Promise<Greeting[]> => ipcRenderer.invoke('listGreetings'),
+  setGreeting: (
+    userId: string,
+    userName: string,
+    greeting: string,
+  ): Promise<void> =>
+    ipcRenderer.invoke('setGreeting', userId, userName, greeting),
+  updateGreeting: (userId: string, greeting: string): Promise<void> =>
+    ipcRenderer.invoke('updateGreeting', userId, greeting),
+  deleteGreeting: (userId: string): Promise<void> =>
+    ipcRenderer.invoke('deleteGreeting', userId),
+
   // dddice
   getDDDiceApiKey: (): Promise<string> => ipcRenderer.invoke('getDDDiceApiKey'),
   setDDDiceApiKey: (ddDiceApiKey: string): Promise<void> =>
@@ -72,6 +86,7 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('ddDiceThemes');
     ipcRenderer.on('ddDiceThemes', callback);
   },
+
   // twich
   getTwitchBotClient: (): Promise<TwitchClient> =>
     ipcRenderer.invoke('getTwitchBotClient'),
@@ -103,6 +118,10 @@ const electronHandler = {
     ipcRenderer.invoke('startTwitchCallbackServer', twitchConnection),
   stopTwitchCallbackServer: (): Promise<void> =>
     ipcRenderer.invoke('stopTwitchCallbackServer'),
+  getTwitchUserId: (userName: string): Promise<string> =>
+    ipcRenderer.invoke('getTwitchUserId', userName),
+  getTwitchChatters: (): Promise<{ userId: string; userName: string }[]> =>
+    ipcRenderer.invoke('getTwitchChatters'),
   onTwitchCallbackServerStatus: (
     callback: (
       event: IpcRendererEvent,
