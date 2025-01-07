@@ -67,7 +67,13 @@ function AddDialog({
     setAdding(false);
   };
 
-  function mapPred({ userId, userName }: { userId: string; userName: string }) {
+  const mapPred = ({
+    userId,
+    userName,
+  }: {
+    userId: string;
+    userName: string;
+  }) => {
     return (
       <ListItem key={userId} disablePadding>
         <ListItemButton
@@ -81,7 +87,7 @@ function AddDialog({
         </ListItemButton>
       </ListItem>
     );
-  }
+  };
 
   return (
     <Dialog
