@@ -286,6 +286,8 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     } else if (event.rewardId === '6122c2f8-f553-40bc-b58b-22beabf295a8') {
       greetings.setGreeting(event.userId, event.userName, event.input);
       twitch.say(`@${event.userName} added a welcome message!`);
+    } else if (event.rewardId === '0404b4be-9ed9-4cb9-afcf-6923c1564c7c') {
+      // daily chaos card
     }
   });
   twitch.onSeen((userId) => {
