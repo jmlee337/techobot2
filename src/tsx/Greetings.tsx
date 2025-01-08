@@ -11,6 +11,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
+  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -261,192 +262,197 @@ export default function Greetings() {
     </ListItem>
   );
   return (
-    <>
-      <Button
-        onClick={async () => {
-          setOpen(true);
-          setGetting(true);
-          try {
-            setGreetings(await window.electron.listGreetings());
-          } catch {
-            // just catch
-          }
-          setGetting(false);
-        }}
-        variant="contained"
-      >
-        Greetings
-      </Button>
-      <Dialog
-        open={open}
-        onClose={() => {
-          setOpen(false);
-        }}
-      >
-        <DialogTitle>Greetings</DialogTitle>
-        <DialogContent>
-          <Stack
-            alignItems="end"
-            direction="row"
-            justifyContent="space-between"
-            spacing="8px"
-          >
+    <Paper elevation={2} square>
+      <Stack padding="8px">
+        <Button
+          onClick={async () => {
+            setOpen(true);
+            setGetting(true);
+            try {
+              setGreetings(await window.electron.listGreetings());
+            } catch {
+              // just catch
+            }
+            setGetting(false);
+          }}
+          variant="contained"
+        >
+          Greetings
+        </Button>
+        <Dialog
+          open={open}
+          onClose={() => {
+            setOpen(false);
+          }}
+        >
+          <DialogTitle>Greetings</DialogTitle>
+          <DialogContent>
+            <Stack
+              alignItems="end"
+              direction="row"
+              justifyContent="space-between"
+              spacing="8px"
+            >
+              <TextField
+                label="Search"
+                onChange={(event) => {
+                  setFilter(event.target.value);
+                }}
+                size="small"
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <IconButton
+                        onClick={() => {
+                          setFilter('');
+                        }}
+                      >
+                        <Close />
+                      </IconButton>
+                    ),
+                  },
+                }}
+                style={{ marginTop: '8px' }}
+                value={filter}
+              />
+              <Button
+                onClick={async () => {
+                  setAddOpen(true);
+                  setGettingChatters(true);
+                  try {
+                    setChatters(await window.electron.getTwitchChatters());
+                    setChattersError('');
+                  } catch (e: unknown) {
+                    if (e instanceof Error) {
+                      setChattersError(e.message);
+                    }
+                  }
+                  setGettingChatters(false);
+                }}
+                variant="contained"
+              >
+                Add!
+              </Button>
+            </Stack>
+            {getting ? (
+              <Stack direction="row" justifyContent="center">
+                <CircularProgress size="24px" />
+              </Stack>
+            ) : (
+              <List>
+                {filter
+                  ? greetings
+                      .filter(
+                        ({ userName, greeting }) =>
+                          userName.toLocaleLowerCase().includes(filterLower) ||
+                          greeting.toLocaleLowerCase().includes(filterLower),
+                      )
+                      .map(mapPred)
+                  : greetings.map(mapPred)}
+              </List>
+            )}
+          </DialogContent>
+        </Dialog>
+        <AddDialog
+          open={addOpen}
+          setOpen={setAddOpen}
+          chatters={chatters}
+          error={chattersError}
+          setError={setChattersError}
+          getting={gettingChatters}
+          onAdd={async () => {
+            try {
+              setGreetings(await window.electron.listGreetings());
+            } catch {
+              // just catch
+            }
+          }}
+        />
+        <Dialog
+          open={updateOpen}
+          onClose={() => {
+            setUpdateOpen(false);
+          }}
+        >
+          <DialogTitle>Updating Greeting for {editUserName}</DialogTitle>
+          <DialogContent>
             <TextField
-              label="Search"
+              label="Greeting"
               onChange={(event) => {
-                setFilter(event.target.value);
+                setEditGreeting(event.target.value);
               }}
-              size="small"
-              slotProps={{
-                input: {
-                  endAdornment: (
-                    <IconButton
-                      onClick={() => {
-                        setFilter('');
-                      }}
-                    >
-                      <Close />
-                    </IconButton>
-                  ),
-                },
-              }}
-              style={{ marginTop: '8px' }}
-              value={filter}
+              multiline
+              value={editGreeting}
+              variant="filled"
             />
+          </DialogContent>
+          <DialogActions>
             <Button
               onClick={async () => {
-                setAddOpen(true);
-                setGettingChatters(true);
+                setSetting(true);
                 try {
-                  setChatters(await window.electron.getTwitchChatters());
-                  setChattersError('');
-                } catch (e: unknown) {
-                  if (e instanceof Error) {
-                    setChattersError(e.message);
-                  }
+                  await window.electron.updateGreeting(
+                    editUserId,
+                    editGreeting,
+                  );
+                  setGreetings(await window.electron.listGreetings());
+                } catch {
+                  // just catch
                 }
-                setGettingChatters(false);
+                setSetting(false);
+                setUpdateOpen(false);
               }}
               variant="contained"
             >
-              Add!
+              Update!
             </Button>
-          </Stack>
-          {getting ? (
-            <Stack direction="row" justifyContent="center">
-              <CircularProgress size="24px" />
-            </Stack>
-          ) : (
-            <List>
-              {filter
-                ? greetings
-                    .filter(
-                      ({ userName, greeting }) =>
-                        userName.toLocaleLowerCase().includes(filterLower) ||
-                        greeting.toLocaleLowerCase().includes(filterLower),
-                    )
-                    .map(mapPred)
-                : greetings.map(mapPred)}
-            </List>
-          )}
-        </DialogContent>
-      </Dialog>
-      <AddDialog
-        open={addOpen}
-        setOpen={setAddOpen}
-        chatters={chatters}
-        error={chattersError}
-        setError={setChattersError}
-        getting={gettingChatters}
-        onAdd={async () => {
-          try {
-            setGreetings(await window.electron.listGreetings());
-          } catch {
-            // just catch
-          }
-        }}
-      />
-      <Dialog
-        open={updateOpen}
-        onClose={() => {
-          setUpdateOpen(false);
-        }}
-      >
-        <DialogTitle>Updating Greeting for {editUserName}</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Greeting"
-            onChange={(event) => {
-              setEditGreeting(event.target.value);
-            }}
-            multiline
-            value={editGreeting}
-            variant="filled"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={async () => {
-              setSetting(true);
-              try {
-                await window.electron.updateGreeting(editUserId, editGreeting);
-                setGreetings(await window.electron.listGreetings());
-              } catch {
-                // just catch
-              }
-              setSetting(false);
-              setUpdateOpen(false);
-            }}
-            variant="contained"
-          >
-            Update!
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        open={deleteOpen}
-        onClose={() => {
-          setDeleteOpen(false);
-        }}
-      >
-        <DialogTitle>Delete Greeting for {editUserName}?</DialogTitle>
-        <DialogContent>
-          <TextField
-            disabled
-            label="Greeting"
-            multiline
-            value={editGreeting}
-            variant="filled"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setDeleteOpen(false);
-            }}
-            variant="contained"
-          >
-            Cancel
-          </Button>
-          <Button
-            color="error"
-            onClick={async () => {
-              setSetting(true);
-              try {
-                await window.electron.deleteGreeting(editUserId);
-                setGreetings(await window.electron.listGreetings());
-              } catch {
-                // just catch
-              }
-              setSetting(false);
-              setDeleteOpen(false);
-            }}
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          open={deleteOpen}
+          onClose={() => {
+            setDeleteOpen(false);
+          }}
+        >
+          <DialogTitle>Delete Greeting for {editUserName}?</DialogTitle>
+          <DialogContent>
+            <TextField
+              disabled
+              label="Greeting"
+              multiline
+              value={editGreeting}
+              variant="filled"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setDeleteOpen(false);
+              }}
+              variant="contained"
+            >
+              Cancel
+            </Button>
+            <Button
+              color="error"
+              onClick={async () => {
+                setSetting(true);
+                try {
+                  await window.electron.deleteGreeting(editUserId);
+                  setGreetings(await window.electron.listGreetings());
+                } catch {
+                  // just catch
+                }
+                setSetting(false);
+                setDeleteOpen(false);
+              }}
+              variant="contained"
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Stack>
+    </Paper>
   );
 }

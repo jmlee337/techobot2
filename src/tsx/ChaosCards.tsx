@@ -4,6 +4,7 @@ import {
   Button,
   CircularProgress,
   DialogContentText,
+  Paper,
   Stack,
   Tooltip,
 } from '@mui/material';
@@ -29,35 +30,37 @@ export default function ChaosCards() {
   }, []);
 
   return (
-    <Stack alignItems="center" direction="row" spacing="8px">
-      {status === ChaosStatus.NONE &&
-        (statusMessage ? (
-          <Tooltip title={statusMessage}>
+    <Paper elevation={2} square>
+      <Stack alignItems="center" direction="row" padding="8px" spacing="8px">
+        {status === ChaosStatus.NONE &&
+          (statusMessage ? (
+            <Tooltip title={statusMessage}>
+              <Close color="error" />
+            </Tooltip>
+          ) : (
             <Close color="error" />
+          ))}
+        {status === ChaosStatus.STARTING && (
+          <Tooltip title="Starting WebSocketServer">
+            <CircularProgress size="24px" />
           </Tooltip>
-        ) : (
-          <Close color="error" />
-        ))}
-      {status === ChaosStatus.STARTING && (
-        <Tooltip title="Starting WebSocketServer">
-          <CircularProgress size="24px" />
-        </Tooltip>
-      )}
-      {status === ChaosStatus.STARTED && (
-        <Tooltip title="Waiting for WebSocketClient">
-          <CircularProgress size="24px" />
-        </Tooltip>
-      )}
-      {status === ChaosStatus.CONNECTED && <Check color="success" />}
-      <Button
-        onClick={() => {
-          window.electron.showChaosHtml();
-        }}
-        variant="contained"
-      >
-        Show HTML
-      </Button>
-      <DialogContentText>Chaos Cards</DialogContentText>
-    </Stack>
+        )}
+        {status === ChaosStatus.STARTED && (
+          <Tooltip title="Waiting for WebSocketClient">
+            <CircularProgress size="24px" />
+          </Tooltip>
+        )}
+        {status === ChaosStatus.CONNECTED && <Check color="success" />}
+        <Button
+          onClick={() => {
+            window.electron.showChaosHtml();
+          }}
+          variant="contained"
+        >
+          Show HTML
+        </Button>
+        <DialogContentText>Chaos Cards</DialogContentText>
+      </Stack>
+    </Paper>
   );
 }

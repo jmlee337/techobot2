@@ -24,7 +24,7 @@ export default function App() {
           <Typography variant="caption">version {version}</Typography>
         </Toolbar>
       </AppBar>
-      <Grid2 container padding="8px" spacing={4}>
+      <Grid2 container padding="8px 0" spacing={2}>
         <Grid2 size={4}>
           <Stack spacing="8px">
             <ManualRoll />

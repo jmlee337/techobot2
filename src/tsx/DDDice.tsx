@@ -12,6 +12,7 @@ import {
   List,
   ListItem,
   ListItemButton,
+  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -180,159 +181,167 @@ export default function DDDice() {
   );
 
   return (
-    <Stack spacing="8px">
-      <DialogContentText paddingLeft="32px">
-        Get your API key from the{' '}
-        <Link
-          href="https://dddice.com/account/developer"
-          target="_blank"
-          rel="noreferrer"
-        >
-          dddice Developer Console
-        </Link>
-        .
-      </DialogContentText>
-      <Stack alignItems="center" direction="row" spacing="8px">
-        {usernameStatus === DDDiceFetchStatus.NONE &&
-          (usernameStatusMessage ? (
-            <Tooltip title={usernameStatusMessage}>
+    <Paper elevation={2} square>
+      <Stack padding="8px" spacing="8px">
+        <DialogContentText paddingLeft="32px">
+          Get your API key from the{' '}
+          <Link
+            href="https://dddice.com/account/developer"
+            target="_blank"
+            rel="noreferrer"
+          >
+            dddice Developer Console
+          </Link>
+          .
+        </DialogContentText>
+        <Stack alignItems="center" direction="row" spacing="8px">
+          {usernameStatus === DDDiceFetchStatus.NONE &&
+            (usernameStatusMessage ? (
+              <Tooltip title={usernameStatusMessage}>
+                <Close color="error" />
+              </Tooltip>
+            ) : (
               <Close color="error" />
-            </Tooltip>
-          ) : (
-            <Close color="error" />
-          ))}
-        {usernameStatus === DDDiceFetchStatus.FETCHING && (
-          <CircularProgress size="24px" />
-        )}
-        {usernameStatus === DDDiceFetchStatus.FETCHED && (
-          <Check color="success" />
-        )}
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            window.electron.setDDDiceApiKey(apiKey);
-          }}
-        >
-          <TextField
-            label="dddice Api Key"
-            onChange={async (event) => {
-              setApiKey(event.target.value);
+            ))}
+          {usernameStatus === DDDiceFetchStatus.FETCHING && (
+            <CircularProgress size="24px" />
+          )}
+          {usernameStatus === DDDiceFetchStatus.FETCHED && (
+            <Check color="success" />
+          )}
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              window.electron.setDDDiceApiKey(apiKey);
             }}
-            size="small"
-            type="password"
-            value={apiKey}
-          />
-        </form>
-        {username && <DialogContentText>{username}</DialogContentText>}
-      </Stack>
-      <Stack alignItems="center" direction="row" spacing="8px">
-        {roomsStatus === DDDiceFetchStatus.NONE &&
-          (roomsStatusMessage ? (
-            <Tooltip title={roomsStatusMessage}>
-              <Close color="error" />
-            </Tooltip>
-          ) : (
-            <Close color="error" />
-          ))}
-        {roomsStatus === DDDiceFetchStatus.FETCHING && (
-          <CircularProgress size="24px" />
-        )}
-        {roomsStatus === DDDiceFetchStatus.FETCHED && <Check color="success" />}
-        <Button
-          onClick={async () => {
-            setRoomsOpen(true);
-          }}
-          variant="contained"
-        >
-          {roomSlug ? 'CHANGE' : 'SET'}
-        </Button>
-        <DialogContentText>dddice Room: {roomSlug ?? 'NONE'}</DialogContentText>
-        <Dialog
-          fullWidth
-          open={roomsOpen}
-          onClose={() => {
-            setRoomsOpen(false);
-          }}
-        >
-          <DialogTitle>Set dddice Room</DialogTitle>
-          <DialogContent>
-            {searchBox}
-            {roomsStatus === DDDiceFetchStatus.FETCHING ? (
-              <Stack direction="row" justifyContent="center" marginTop="8px">
-                <CircularProgress size="24px" />
-              </Stack>
+          >
+            <TextField
+              label="dddice Api Key"
+              onChange={async (event) => {
+                setApiKey(event.target.value);
+              }}
+              size="small"
+              type="password"
+              value={apiKey}
+            />
+          </form>
+          {username && <DialogContentText>{username}</DialogContentText>}
+        </Stack>
+        <Stack alignItems="center" direction="row" spacing="8px">
+          {roomsStatus === DDDiceFetchStatus.NONE &&
+            (roomsStatusMessage ? (
+              <Tooltip title={roomsStatusMessage}>
+                <Close color="error" />
+              </Tooltip>
             ) : (
-              <List>
-                {filter
-                  ? rooms
-                      .filter(
-                        ({ name, slug }) =>
-                          name.toLocaleLowerCase().includes(filterLower) ||
-                          slug.toLocaleLowerCase().includes(filterLower),
-                      )
-                      .map(roomMapPred)
-                  : rooms.map(roomMapPred)}
-              </List>
-            )}
-          </DialogContent>
-        </Dialog>
-      </Stack>
-      <Stack alignItems="center" direction="row" spacing="8px">
-        {themesStatus === DDDiceFetchStatus.NONE &&
-          (themesStatusMessage ? (
-            <Tooltip title={themesStatusMessage}>
               <Close color="error" />
-            </Tooltip>
-          ) : (
-            <Close color="error" />
-          ))}
-        {themesStatus === DDDiceFetchStatus.FETCHING && (
-          <CircularProgress size="24px" />
-        )}
-        {themesStatus === DDDiceFetchStatus.FETCHED && (
-          <Check color="success" />
-        )}
-        <Button
-          onClick={async () => {
-            setThemesOpen(true);
-          }}
-          variant="contained"
-        >
-          {themeId ? 'CHANGE' : 'SET'}
-        </Button>
-        <DialogContentText>dddice Theme: {themeId ?? 'NONE'}</DialogContentText>
-        <Dialog
-          fullWidth
-          open={themesOpen}
-          onClose={() => {
-            setThemesOpen(false);
-            setFilter('');
-          }}
-        >
-          <DialogTitle>Set dddice Theme</DialogTitle>
-          <DialogContent>
-            {searchBox}
-            {themesStatus === DDDiceFetchStatus.FETCHING ? (
-              <Stack direction="row" justifyContent="center" marginTop="8px">
-                <CircularProgress size="24px" />
-              </Stack>
+            ))}
+          {roomsStatus === DDDiceFetchStatus.FETCHING && (
+            <CircularProgress size="24px" />
+          )}
+          {roomsStatus === DDDiceFetchStatus.FETCHED && (
+            <Check color="success" />
+          )}
+          <Button
+            onClick={async () => {
+              setRoomsOpen(true);
+            }}
+            variant="contained"
+          >
+            {roomSlug ? 'CHANGE' : 'SET'}
+          </Button>
+          <DialogContentText>
+            dddice Room: {roomSlug ?? 'NONE'}
+          </DialogContentText>
+          <Dialog
+            fullWidth
+            open={roomsOpen}
+            onClose={() => {
+              setRoomsOpen(false);
+            }}
+          >
+            <DialogTitle>Set dddice Room</DialogTitle>
+            <DialogContent>
+              {searchBox}
+              {roomsStatus === DDDiceFetchStatus.FETCHING ? (
+                <Stack direction="row" justifyContent="center" marginTop="8px">
+                  <CircularProgress size="24px" />
+                </Stack>
+              ) : (
+                <List>
+                  {filter
+                    ? rooms
+                        .filter(
+                          ({ name, slug }) =>
+                            name.toLocaleLowerCase().includes(filterLower) ||
+                            slug.toLocaleLowerCase().includes(filterLower),
+                        )
+                        .map(roomMapPred)
+                    : rooms.map(roomMapPred)}
+                </List>
+              )}
+            </DialogContent>
+          </Dialog>
+        </Stack>
+        <Stack alignItems="center" direction="row" spacing="8px">
+          {themesStatus === DDDiceFetchStatus.NONE &&
+            (themesStatusMessage ? (
+              <Tooltip title={themesStatusMessage}>
+                <Close color="error" />
+              </Tooltip>
             ) : (
-              <List>
-                {filter
-                  ? themes
-                      .filter(
-                        ({ id, name }) =>
-                          id.toLocaleLowerCase().includes(filterLower) ||
-                          name.toLocaleLowerCase().includes(filterLower),
-                      )
-                      .map(themeMapPred)
-                  : themes.map(themeMapPred)}
-              </List>
-            )}
-          </DialogContent>
-        </Dialog>
+              <Close color="error" />
+            ))}
+          {themesStatus === DDDiceFetchStatus.FETCHING && (
+            <CircularProgress size="24px" />
+          )}
+          {themesStatus === DDDiceFetchStatus.FETCHED && (
+            <Check color="success" />
+          )}
+          <Button
+            onClick={async () => {
+              setThemesOpen(true);
+            }}
+            variant="contained"
+          >
+            {themeId ? 'CHANGE' : 'SET'}
+          </Button>
+          <DialogContentText>
+            dddice Theme: {themeId ?? 'NONE'}
+          </DialogContentText>
+          <Dialog
+            fullWidth
+            open={themesOpen}
+            onClose={() => {
+              setThemesOpen(false);
+              setFilter('');
+            }}
+          >
+            <DialogTitle>Set dddice Theme</DialogTitle>
+            <DialogContent>
+              {searchBox}
+              {themesStatus === DDDiceFetchStatus.FETCHING ? (
+                <Stack direction="row" justifyContent="center" marginTop="8px">
+                  <CircularProgress size="24px" />
+                </Stack>
+              ) : (
+                <List>
+                  {filter
+                    ? themes
+                        .filter(
+                          ({ id, name }) =>
+                            id.toLocaleLowerCase().includes(filterLower) ||
+                            name.toLocaleLowerCase().includes(filterLower),
+                        )
+                        .map(themeMapPred)
+                    : themes.map(themeMapPred)}
+                </List>
+              )}
+            </DialogContent>
+          </Dialog>
+        </Stack>
       </Stack>
-    </Stack>
+    </Paper>
   );
 }

@@ -16,7 +16,7 @@ export default function ManualRoll() {
   const [error, setError] = useState('');
 
   return (
-    <Paper elevation={2}>
+    <Paper elevation={2} square>
       <form
         onSubmit={async (event) => {
           event.preventDefault();

@@ -6,7 +6,7 @@ import ChaosCards from './ChaosCards';
 export default function Settings() {
   return (
     <>
-      <Stack spacing="16px">
+      <Stack spacing="8px">
         <Twitch />
         <DDDice />
         <ChaosCards />

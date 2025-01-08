@@ -6,7 +6,7 @@ export default function ManualChaos() {
   const [error, setError] = useState('');
 
   return (
-    <Paper elevation={2}>
+    <Paper elevation={2} square>
       <Stack padding="8px" spacing="8px">
         <Button
           disabled={sending}

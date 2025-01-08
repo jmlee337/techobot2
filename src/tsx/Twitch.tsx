@@ -8,6 +8,7 @@ import {
   DialogContentText,
   DialogTitle,
   Link,
+  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -284,91 +285,93 @@ export default function Twitch() {
   const callbackUrl = `http://localhost:${port}`;
 
   return (
-    <Stack spacing="8px">
-      <Stack alignItems="center" direction="row" spacing="8px">
-        {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
-          (channelStatusMessage ? (
-            <Tooltip title={channelStatusMessage}>
-              <Close color="error" />
-            </Tooltip>
-          ) : (
-            <Close color="error" />
-          ))}
-        {channelStatus === TwitchConnectionStatus.CONNECTING && (
-          <CircularProgress size="24px" />
-        )}
-        {channelStatus === TwitchConnectionStatus.CONNECTED && (
-          <Check color="success" />
-        )}
-        <Button
-          onClick={() => {
-            setChannelOpen(true);
-          }}
-          variant="contained"
-        >
+    <Paper elevation={2} square>
+      <Stack padding="8px" spacing="8px">
+        <Stack alignItems="center" direction="row" spacing="8px">
           {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
-          !channelStatusMessage
-            ? 'SET UP'
-            : 'CHANGE'}
-        </Button>
-        <DialogContentText>
-          Twitch Channel: {channel ? channel : 'NONE'}
-        </DialogContentText>
-        <SetupDialog
-          connection={TwitchConnection.CHANNEL}
-          client={channelClient}
-          callbackServerStatus={callbackServerStatus}
-          callbackUrl={callbackUrl}
-          port={port}
-          open={channelOpen}
-          setClient={async (newClient) => {
-            await window.electron.setTwitchChannelClient(newClient);
-            setChannelClient(newClient);
-          }}
-        />
-      </Stack>
-      <Stack alignItems="center" direction="row" spacing="8px">
-        {botStatus === TwitchConnectionStatus.DISCONNECTED &&
-          (botStatusMessage ? (
-            <Tooltip title={botStatusMessage}>
+            (channelStatusMessage ? (
+              <Tooltip title={channelStatusMessage}>
+                <Close color="error" />
+              </Tooltip>
+            ) : (
               <Close color="error" />
-            </Tooltip>
-          ) : (
-            <Close color="error" />
-          ))}
-        {botStatus === TwitchConnectionStatus.CONNECTING && (
-          <CircularProgress size="24px" />
-        )}
-        {botStatus === TwitchConnectionStatus.CONNECTED && (
-          <Check color="success" />
-        )}
-        <Button
-          onClick={() => {
-            setBotOpen(true);
-          }}
-          variant="contained"
-        >
+            ))}
+          {channelStatus === TwitchConnectionStatus.CONNECTING && (
+            <CircularProgress size="24px" />
+          )}
+          {channelStatus === TwitchConnectionStatus.CONNECTED && (
+            <Check color="success" />
+          )}
+          <Button
+            onClick={() => {
+              setChannelOpen(true);
+            }}
+            variant="contained"
+          >
+            {channelStatus === TwitchConnectionStatus.DISCONNECTED &&
+            !channelStatusMessage
+              ? 'SET UP'
+              : 'CHANGE'}
+          </Button>
+          <DialogContentText>
+            Twitch Channel: {channel ? channel : 'NONE'}
+          </DialogContentText>
+          <SetupDialog
+            connection={TwitchConnection.CHANNEL}
+            client={channelClient}
+            callbackServerStatus={callbackServerStatus}
+            callbackUrl={callbackUrl}
+            port={port}
+            open={channelOpen}
+            setClient={async (newClient) => {
+              await window.electron.setTwitchChannelClient(newClient);
+              setChannelClient(newClient);
+            }}
+          />
+        </Stack>
+        <Stack alignItems="center" direction="row" spacing="8px">
           {botStatus === TwitchConnectionStatus.DISCONNECTED &&
-          !botStatusMessage
-            ? 'SET UP'
-            : 'CHANGE'}
-        </Button>
-        <DialogContentText>
-          Twitch Bot: {botUserName ? botUserName : 'NONE'}
-        </DialogContentText>
-        <SetupDialog
-          connection={TwitchConnection.BOT}
-          client={botClient}
-          callbackServerStatus={callbackServerStatus}
-          callbackUrl={callbackUrl}
-          port={port}
-          open={botOpen}
-          setClient={async (newClient) => {
-            await window.electron.setTwitchBotClient(newClient);
-            setBotClient(newClient);
-          }}
-        />
+            (botStatusMessage ? (
+              <Tooltip title={botStatusMessage}>
+                <Close color="error" />
+              </Tooltip>
+            ) : (
+              <Close color="error" />
+            ))}
+          {botStatus === TwitchConnectionStatus.CONNECTING && (
+            <CircularProgress size="24px" />
+          )}
+          {botStatus === TwitchConnectionStatus.CONNECTED && (
+            <Check color="success" />
+          )}
+          <Button
+            onClick={() => {
+              setBotOpen(true);
+            }}
+            variant="contained"
+          >
+            {botStatus === TwitchConnectionStatus.DISCONNECTED &&
+            !botStatusMessage
+              ? 'SET UP'
+              : 'CHANGE'}
+          </Button>
+          <DialogContentText>
+            Twitch Bot: {botUserName ? botUserName : 'NONE'}
+          </DialogContentText>
+          <SetupDialog
+            connection={TwitchConnection.BOT}
+            client={botClient}
+            callbackServerStatus={callbackServerStatus}
+            callbackUrl={callbackUrl}
+            port={port}
+            open={botOpen}
+            setClient={async (newClient) => {
+              await window.electron.setTwitchBotClient(newClient);
+              setBotClient(newClient);
+            }}
+          />
+        </Stack>
       </Stack>
-    </Stack>
+    </Paper>
   );
 }
