@@ -10,10 +10,12 @@ import {
   DDDiceTheme,
   DDDiceRoom,
   DDDiceFetchStatus,
+  ChaosStatus,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
 import Greetings from './greetings';
+import Chaos from './chaos';
 
 function parseRoll(roll: string): ParsedRoll {
   const rollLower = roll.toLowerCase();
@@ -55,6 +57,31 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+
+  // chaos
+  let chaosStatus = ChaosStatus.NONE;
+  let chaosStatusMessage = '';
+  const chaos = new Chaos((status, message) => {
+    chaosStatus = status;
+    chaosStatusMessage = message;
+    mainWindow.webContents.send('chaosStatus', chaosStatus, chaosStatusMessage);
+  });
+  chaos.initialize();
+
+  ipcMain.removeAllListeners('getChaosStatus');
+  ipcMain.handle('getChaosStatus', () => ({
+    status: chaosStatus,
+    message: chaosStatusMessage,
+  }));
+
+  ipcMain.removeAllListeners('showChaosHtml');
+  ipcMain.handle('showChaosHtml', () => chaos.showHtml());
+
+  ipcMain.removeAllListeners('chaosCard');
+  ipcMain.handle('chaosCard', () => chaos.chaosCard());
+
+  ipcMain.removeAllListeners('chaosPlus');
+  ipcMain.handle('chaosPlus', () => chaos.chaosPlus());
 
   // greetings
   const greetings = new Greetings();
@@ -364,4 +391,18 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('getTwitchChatters', () => twitch.getChatters());
 
   ipcMain.handle('getVersion', app.getVersion);
+
+  app.on('will-quit', async (event) => {
+    if (chaos.isOpen()) {
+      event.preventDefault();
+      await chaos.close();
+    }
+    if (twitch.isOpen()) {
+      event.preventDefault();
+      twitch.close();
+    }
+    if (event.defaultPrevented) {
+      app.quit();
+    }
+  });
 }

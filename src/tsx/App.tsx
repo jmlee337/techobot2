@@ -3,6 +3,7 @@ import Settings from './Settings';
 import ManualRoll from './ManualRoll';
 import { useEffect, useState } from 'react';
 import Greetings from './Greetings';
+import ManualChaos from './ManualChaos';
 
 export default function App() {
   const [version, setVersion] = useState('');
@@ -23,10 +24,11 @@ export default function App() {
           <Typography variant="caption">version {version}</Typography>
         </Toolbar>
       </AppBar>
-      <Grid2 container padding="8px" spacing={8}>
+      <Grid2 container padding="8px" spacing={4}>
         <Grid2 size={4}>
           <Stack spacing="8px">
             <ManualRoll />
+            <ManualChaos />
             <Greetings />
           </Stack>
         </Grid2>

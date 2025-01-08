@@ -46,3 +46,10 @@ export type Greeting = {
   userName: string;
   greeting: string;
 };
+
+export enum ChaosStatus {
+  NONE,
+  STARTING,
+  STARTED,
+  CONNECTED,
+}

@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <style></style>
+  </head>
+  <body>
+    <div>Status: <span id="status">disconnected</span></div>
+    <script>
+      const timeout = setTimeout(() => {
+        location.reload();
+      }, 15000);
+      const socket = new WebSocket(
+        'http://localhost:51440',
+        'chaos-cards-protocol',
+      );
+      socket.onopen = () => {
+        clearTimeout(timeout);
+        document.getElementById('status').innerText = 'connected';
+      };
+      socket.onmessage = (event) => {
+        console.log(JSON.stringify(event.data));
+      };
+      socket.onclose = () => {
+        location.reload();
+      };
+    </script>
+  </body>
+</html>

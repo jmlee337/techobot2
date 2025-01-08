@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import {
+  ChaosStatus,
   DDDiceFetchStatus,
   DDDiceRoom,
   DDDiceTheme,
@@ -11,6 +12,23 @@ import {
 } from './types';
 
 const electronHandler = {
+  // chaos
+  getChaosStatus: (): Promise<{ status: ChaosStatus; message: string }> =>
+    ipcRenderer.invoke('getChaosStatus'),
+  showChaosHtml: (): Promise<void> => ipcRenderer.invoke('showChaosHtml'),
+  chaosCard: (): Promise<void> => ipcRenderer.invoke('chaosCard'),
+  chaosPlus: (): Promise<void> => ipcRenderer.invoke('chaosPlus'),
+  onChaosStatus: (
+    callback: (
+      event: IpcRendererEvent,
+      status: ChaosStatus,
+      message: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('chaosStatus');
+    ipcRenderer.on('chaosStatus', callback);
+  },
+
   // greetings
   listGreetings: (): Promise<Greeting[]> => ipcRenderer.invoke('listGreetings'),
   setGreeting: (

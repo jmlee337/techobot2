@@ -469,4 +469,21 @@ export default class Twitch {
 
     return user.id;
   }
+
+  isOpen() {
+    return !!(this.chatClient || this.eventSubWsListener);
+  }
+
+  close() {
+    if (this.chatClient) {
+      this.chatClient.removeListener();
+      this.chatClient.quit();
+      this.chatClient = null;
+    }
+    if (this.eventSubWsListener) {
+      this.eventSubWsListener.removeListener();
+      this.eventSubWsListener.stop();
+      this.eventSubWsListener = null;
+    }
+  }
 }
