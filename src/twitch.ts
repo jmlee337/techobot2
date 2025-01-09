@@ -18,7 +18,7 @@ import {
 } from './types';
 import GracefulShutdown from 'http-graceful-shutdown';
 import { EventSubWsListener } from '@twurple/eventsub-ws';
-import { ApiClient } from '@twurple/api';
+import { ApiClient, HelixModerator, HelixPaginatedResult } from '@twurple/api';
 import { EventSubChannelRedemptionAddEvent } from '@twurple/eventsub-base';
 
 export default class Twitch {
@@ -55,6 +55,10 @@ export default class Twitch {
     | null;
   private onSeenCallback: ((userId: string) => void) | null;
   private seenUserIdToUserName: Map<string, string>;
+  private moderatorUserIds: Set<string>;
+  private onCommandCallback:
+    | ((lowerCommand: string, userId: string, userName: string) => void)
+    | null;
 
   constructor(
     botClient: TwitchClient,
@@ -97,6 +101,8 @@ export default class Twitch {
     this.redemptionCallback = null;
     this.onSeenCallback = null;
     this.seenUserIdToUserName = new Map();
+    this.moderatorUserIds = new Set();
+    this.onCommandCallback = null;
   }
 
   async initialize() {
@@ -247,7 +253,7 @@ export default class Twitch {
         throw new Error('must start callback server.');
       }
       shell.openExternal(
-        `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClient.clientId}&redirect_uri=http://localhost:${port}&response_type=code&scope=chat:read+chat:edit+channel:manage:redemptions+moderator:read:chatters`,
+        `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClient.clientId}&redirect_uri=http://localhost:${port}&response_type=code&scope=chat:read+chat:edit+channel:manage:redemptions+moderator:read:chatters+moderation:read`,
       );
     }
   }
@@ -330,24 +336,21 @@ export default class Twitch {
       );
     });
     this.chatClient.onMessage((channel, user, text, msg) => {
-      const { userId } = msg.userInfo;
+      const { userId, userName } = msg.userInfo;
       if (!this.seenUserIdToUserName.has(userId)) {
-        this.seenUserIdToUserName.set(
-          msg.userInfo.userId,
-          msg.userInfo.userName,
-        );
+        this.seenUserIdToUserName.set(userId, userName);
         if (this.onSeenCallback) {
           this.onSeenCallback(userId);
         }
       }
       const lowerText = text.toLowerCase();
-      if (
-        lowerText === '!techobot' ||
-        lowerText === '!techobot2' ||
-        lowerText === '!techobot 2' ||
-        lowerText.includes(`@${botUserName.toLowerCase()}`)
-      ) {
-        this.chatClient?.say(channel, 'techobot2');
+      if (lowerText.startsWith(`@${botUserName}`)) {
+        this.chatClient?.say(
+          channel,
+          '!tally !tallyrules !tallytop !tallylast - techobot2 made by Nicolet (@jmlee337)',
+        );
+      } else if (lowerText.startsWith('!') && this.onCommandCallback) {
+        this.onCommandCallback(lowerText.slice(1), userId, userName);
       }
     });
     this.chatClient.connect();
@@ -409,8 +412,33 @@ export default class Twitch {
     await authProvider.addUser(this.userId, this.channelAccessToken);
 
     this.apiClient = new ApiClient({ authProvider });
+
+    let after: string | undefined = '';
+    try {
+      do {
+        const page = (await this.apiClient.moderation.getModerators(
+          this.userId,
+          {
+            after,
+          },
+        )) as HelixPaginatedResult<HelixModerator>;
+        for (const helixModerator of page.data) {
+          this.moderatorUserIds.add(helixModerator.userId);
+        }
+        after = page.cursor;
+      } while (after);
+    } catch {
+      // just catch
+    }
+
     this.eventSubWsListener = new EventSubWsListener({
       apiClient: this.apiClient,
+    });
+    this.eventSubWsListener.onChannelModeratorAdd(this.userId, (event) => {
+      this.moderatorUserIds.add(event.userId);
+    });
+    this.eventSubWsListener.onChannelModeratorRemove(this.userId, (event) => {
+      this.moderatorUserIds.delete(event.userId);
     });
     if (this.redemptionCallback) {
       this.eventSubWsListener.onChannelRedemptionAdd(
@@ -446,6 +474,12 @@ export default class Twitch {
     this.onSeenCallback = callback;
   }
 
+  onCommand(
+    callback: (lowerCommand: string, userId: string, userName: string) => void,
+  ) {
+    this.onCommandCallback = callback;
+  }
+
   say(text: string) {
     this.chatClient?.say(this.channel, text);
   }
@@ -468,6 +502,10 @@ export default class Twitch {
     }
 
     return user.id;
+  }
+
+  isModerator(userId: string) {
+    return this.moderatorUserIds.has(userId) || this.userId === userId;
   }
 
   isOpen() {

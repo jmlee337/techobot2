@@ -5,6 +5,7 @@ import {
   DDDiceRoom,
   DDDiceTheme,
   Greeting,
+  Tally,
   TwitchCallbackServerStatus,
   TwitchClient,
   TwitchConnection,
@@ -12,6 +13,13 @@ import {
 } from './types';
 
 const electronHandler = {
+  //tally
+  getTallyAll: (): Promise<Tally[]> => ipcRenderer.invoke('getTallyAll'),
+  getTallyHasPast: (): Promise<boolean> =>
+    ipcRenderer.invoke('getTallyHasPast'),
+  getTallyPast: (): Promise<{ key: string; tallies: Tally[] }[]> =>
+    ipcRenderer.invoke('getTallyPast'),
+
   // chaos
   getChaosStatus: (): Promise<{ status: ChaosStatus; message: string }> =>
     ipcRenderer.invoke('getChaosStatus'),

@@ -16,6 +16,7 @@ import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
 import Greetings from './greetings';
 import Chaos from './chaos';
+import Tally from './tally';
 
 function parseRoll(roll: string): ParsedRoll {
   const rollLower = roll.toLowerCase();
@@ -57,6 +58,17 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+
+  // tally
+  const tally = new Tally();
+  ipcMain.removeAllListeners('getTallyAll');
+  ipcMain.handle('getTallyAll', () => tally.getAll());
+
+  ipcMain.removeAllListeners('getTallyHasPast');
+  ipcMain.handle('getTallyHasPast', () => tally.hasPast());
+
+  ipcMain.removeAllListeners('getTallyPast');
+  ipcMain.handle('getTallyPast', () => tally.getPast());
 
   // chaos
   let chaosStatus = ChaosStatus.NONE;
@@ -290,10 +302,56 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
+  twitch.onCommand((lowerCommand, userId, userName) => {
+    if (lowerCommand === 'tally') {
+      if (twitch.isModerator(userId)) {
+        twitch.say(
+          `Sorry @${userName}, mods are not elligilbe for the tally rally`,
+        );
+        return;
+      }
+
+      const points = tally.getPointsForUserId(userId);
+      if (points === 0) {
+        twitch.say(
+          `@${userName} has not redeemed any qualifying channel rewards this month`,
+        );
+      } else {
+        twitch.say(
+          `@${userName} has redeemed ${points} points worth of qualifying channel rewards this month`,
+        );
+      }
+    } else if (lowerCommand === 'tallytop') {
+      const tops = tally.getTop();
+      if (tops.length > 0) {
+        twitch.say(
+          `The tally rally leaders this month: ${tops.map(({ userName, points }) => `${userName} (${points})`).join(', ')}`,
+        );
+      } else {
+        twitch.say('There are no tally rally leaders this month yet!');
+      }
+    } else if (lowerCommand === 'tallylast') {
+      const tops = tally.getLastTop();
+      if (tops.length > 0) {
+        twitch.say(
+          `The tally rally winners last month: ${tops.map(({ userName, points }) => `${userName} (${points})`).join(', ')}`,
+        );
+      } else {
+        twitch.say('There were no tally rally winners last month!');
+      }
+    } else if (lowerCommand === 'tallyrules') {
+      twitch.say(
+        'Channel rewards worth 100 points or more qualify! Top 3 become VIPs for the next month!',
+      );
+    }
+  });
   twitch.onRedemption(async (event) => {
     console.log(
       `${event.rewardId}: ${event.rewardTitle}: ${event.rewardCost} points`,
     );
+    if (event.rewardCost >= 100 && !twitch.isModerator(event.userId)) {
+      tally.addPoints(event.userId, event.userName, event.rewardCost);
+    }
     if (event.rewardId === 'b4073735-6948-474f-9d1c-c68798794d31') {
       try {
         const parsedRoll = parseRoll(event.input);

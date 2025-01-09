@@ -53,3 +53,9 @@ export enum ChaosStatus {
   STARTED,
   CONNECTED,
 }
+
+export type Tally = {
+  userId: string;
+  userName: string;
+  points: number;
+};

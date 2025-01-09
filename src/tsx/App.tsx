@@ -4,6 +4,7 @@ import ManualRoll from './ManualRoll';
 import { useEffect, useState } from 'react';
 import Greetings from './Greetings';
 import ManualChaos from './ManualChaos';
+import Tally from './Tally';
 
 export default function App() {
   const [version, setVersion] = useState('');
@@ -30,6 +31,7 @@ export default function App() {
             <ManualRoll />
             <ManualChaos />
             <Greetings />
+            <Tally />
           </Stack>
         </Grid2>
         <Grid2 size={8}>
