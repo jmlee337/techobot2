@@ -59,3 +59,10 @@ export type Tally = {
   userName: string;
   points: number;
 };
+
+export type Card = {
+  type: 'yugioh';
+  name: string;
+  flavorText: string;
+  imgSrc: string;
+};

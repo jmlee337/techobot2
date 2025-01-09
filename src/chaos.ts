@@ -2,7 +2,8 @@ import { app, shell } from 'electron';
 import { copyFile } from 'fs/promises';
 import path from 'node:path';
 import { WebSocket, WebSocketServer } from 'ws';
-import { ChaosStatus } from './types';
+import { Card, ChaosStatus } from './types';
+import getYugiohCard from './cards/yugioh';
 
 export default class Chaos {
   private onStatus: (status: ChaosStatus, message: string) => void;
@@ -53,13 +54,22 @@ export default class Chaos {
     shell.openPath(this.path);
   }
 
+  private async getCard() {
+    return getYugiohCard();
+  }
+
   async chaosCard() {
+    if (!this.ws) {
+      throw new Error('no WebSocketClient');
+    }
+
+    const card = await this.getCard();
     await new Promise<void>((resolve, reject) => {
       if (!this.ws) {
         reject('no WebSocketClient');
         return;
       }
-      this.ws.send('chaos-card', (err) => {
+      this.ws.send(JSON.stringify([card]), (err) => {
         if (err) {
           reject(err);
         } else {
@@ -70,12 +80,20 @@ export default class Chaos {
   }
 
   async chaosPlus() {
+    if (!this.ws) {
+      throw new Error('no WebSocketClient');
+    }
+
+    const cards: Card[] = [];
+    for (let i = 0; i < 3; i++) {
+      cards.push(await this.getCard());
+    }
     await new Promise<void>((resolve, reject) => {
       if (!this.ws) {
         reject('no WebSocketClient');
         return;
       }
-      this.ws.send('chaos-plus', (err) => {
+      this.ws.send(JSON.stringify(cards), (err) => {
         if (err) {
           reject(err);
         } else {
