@@ -14,7 +14,12 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    extraResource: ['./src/extraResource/chaosCards.html'],
+    extraResource: [
+      './src/extraResource/chaosCards.html',
+      './src/extraResource/card-back-ptcg.html',
+      './src/extraResource/card-back-tarot.html',
+      './src/extraResource/card-back-yugioh.html',
+    ],
   },
   rebuildConfig: {},
   makers: [

@@ -302,7 +302,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
-  twitch.onCommand((lowerCommand, userId, userName) => {
+  twitch.onCommand(async (lowerCommand, userId, userName) => {
     if (lowerCommand === 'tally') {
       if (twitch.isModerator(userId)) {
         twitch.say(
@@ -343,6 +343,27 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       twitch.say(
         'Channel rewards worth 100 points or more qualify! Top 3 become VIPs for the next month!',
       );
+    } else if (lowerCommand === 'chaoscards') {
+      if (twitch.isModerator(userId)) {
+        const cards = await chaos.chaosPlus();
+        setTimeout(() => {
+          twitch.say(
+            `The first card is ${cards[0].name}: ${cards[0].flavorText}`,
+          );
+        }, 20000);
+        setTimeout(() => {
+          twitch.say(
+            `The second card is ${cards[1].name}: ${cards[1].flavorText}`,
+          );
+        }, 25000);
+        setTimeout(() => {
+          twitch.say(
+            `The third card is ${cards[2].name}: ${cards[2].flavorText}`,
+          );
+        }, 30000);
+      } else {
+        twitch.say(`Sorry @${userName}, !chaoscards can only be used by mods.`);
+      }
     }
   });
   twitch.onRedemption(async (event) => {
@@ -372,7 +393,10 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       greetings.setGreeting(event.userId, event.userName, event.input);
       twitch.say(`@${event.userName} added a welcome message!`);
     } else if (event.rewardId === '0404b4be-9ed9-4cb9-afcf-6923c1564c7c') {
-      // daily chaos card
+      const card = await chaos.chaosCard();
+      setTimeout(() => {
+        twitch.say(`@${event.userName} drew ${card.name}: ${card.flavorText}`);
+      }, 20000);
     }
   });
   twitch.onSeen((userId) => {

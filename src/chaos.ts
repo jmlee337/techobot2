@@ -5,20 +5,43 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { Card, ChaosStatus } from './types';
 import getYugiohCard from './cards/yugioh';
 import getPokemonCard from './cards/pokemon';
+import getTarotCard from './cards/tarot';
+
+async function getCard() {
+  switch (Math.floor(Math.random() * 3)) {
+    case 0:
+      return getYugiohCard();
+    case 1:
+      return getPokemonCard();
+    case 2:
+      return getTarotCard();
+    default:
+      throw new Error('getCard oob');
+  }
+}
 
 export default class Chaos {
   private onStatus: (status: ChaosStatus, message: string) => void;
 
   private path: string;
+  private files: { fullPath: string; fileName: string }[];
   private server: WebSocketServer | null;
   private ws: WebSocket | null;
 
   constructor(onStatus: (status: ChaosStatus, message: string) => void) {
     this.onStatus = onStatus;
 
-    this.path = app.isPackaged
-      ? path.join(process.resourcesPath, 'chaosCards.html')
-      : path.join(__dirname, '../../src/extraResource/chaosCards.html');
+    this.files = [
+      'chaosCards.html',
+      'card-back-ptcg.png',
+      'card-back-tarot.png',
+      'card-back-yugioh.png',
+    ].map((fileName) => ({
+      fileName,
+      fullPath: app.isPackaged
+        ? path.join(process.resourcesPath, fileName)
+        : path.join(__dirname, '../../src/extraResource', fileName),
+    }));
     this.server = null;
   }
 
@@ -37,16 +60,17 @@ export default class Chaos {
         this.ws = null;
         this.onStatus(ChaosStatus.STARTED, '');
       };
+      this.ws.send(JSON.stringify({ version: 1 }));
       this.onStatus(ChaosStatus.CONNECTED, '');
     });
-    try {
-      await copyFile(
-        this.path,
-        path.join(app.getPath('userData'), 'chaosCards.html'),
-      );
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        this.onStatus(ChaosStatus.NONE, e.message);
+    const userDataPath = app.getPath('userData');
+    for (const file of this.files) {
+      try {
+        await copyFile(file.fullPath, path.join(userDataPath, file.fileName));
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          this.onStatus(ChaosStatus.NONE, e.message);
+        }
       }
     }
   }
@@ -55,33 +79,22 @@ export default class Chaos {
     shell.openPath(this.path);
   }
 
-  private async getCard() {
-    switch (Math.floor(Math.random() * 2)) {
-      case 0:
-        return getYugiohCard();
-      case 1:
-        return getPokemonCard();
-      default:
-        throw new Error('getCard oob');
-    }
-  }
-
   async chaosCard() {
     if (!this.ws) {
       throw new Error('no WebSocketClient');
     }
 
-    const card = await this.getCard();
-    await new Promise<void>((resolve, reject) => {
+    const card = await getCard();
+    return new Promise<Card>((resolve, reject) => {
       if (!this.ws) {
         reject('no WebSocketClient');
         return;
       }
-      this.ws.send(JSON.stringify([card]), (err) => {
+      this.ws.send(JSON.stringify({ cards: [card] }), (err) => {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(card);
         }
       });
     });
@@ -92,20 +105,21 @@ export default class Chaos {
       throw new Error('no WebSocketClient');
     }
 
-    const cards: Card[] = [];
-    for (let i = 0; i < 3; i++) {
-      cards.push(await this.getCard());
-    }
-    await new Promise<void>((resolve, reject) => {
+    const cards = await Promise.all([
+      getYugiohCard(),
+      getTarotCard(),
+      getPokemonCard(),
+    ]);
+    return new Promise<Card[]>((resolve, reject) => {
       if (!this.ws) {
         reject('no WebSocketClient');
         return;
       }
-      this.ws.send(JSON.stringify(cards), (err) => {
+      this.ws.send(JSON.stringify({ cards }), (err) => {
         if (err) {
           reject(err);
         } else {
-          resolve();
+          resolve(cards);
         }
       });
     });

@@ -1,23 +1,101 @@
 <html>
   <head>
-    <style></style>
+    <style>
+      img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        backface-visibility: hidden;
+        transition: transform 0.5s;
+      }
+      .card {
+        position: relative;
+        perspective: 1100px;
+        transform-style: preserve-3d;
+        width: 300px;
+      }
+      .front {
+        transform: rotateY(180deg);
+      }
+      .flip .front {
+        transform: rotateY(0deg);
+      }
+      .flip .back {
+        transform: rotateY(-180deg);
+      }
+    </style>
   </head>
-  <body>
-    <div>Status: <span id="status">disconnected</span></div>
+  <body style="margin: 0">
+    <!-- min height ~600px, min width 1100px-->
+    <div
+      id="cards"
+      style="
+        align-items: center;
+        display: flex;
+        flex-direction: row;
+        gap: 100px;
+        justify-content: center;
+        width: 1100px;
+      "
+    ></div>
     <script>
+      const version = 1;
       const timeout = setTimeout(() => {
         location.reload();
       }, 15000);
-      const socket = new WebSocket(
-        'http://localhost:51440',
-        'chaos-cards-protocol',
-      );
+      const socket = new WebSocket('http://localhost:51440');
       socket.onopen = () => {
         clearTimeout(timeout);
-        document.getElementById('status').innerText = 'connected';
       };
       socket.onmessage = (event) => {
-        console.log(JSON.stringify(event.data));
+        const data = JSON.parse(event.data);
+        if (Number.isInteger(data.version)) {
+          if (data.version > version) {
+            socket.close();
+          }
+        } else if (Array.isArray(data.cards)) {
+          /**
+           *  {
+           *    type: 'yugioh' | 'pokemon' | 'tarot';
+           *    name: string;
+           *    flavorText: string;
+           *    imgSrc: string;
+           *  }
+           */
+          console.log(JSON.stringify(data.cards));
+          document.getElementById('cards').innerHTML = data.cards
+            .map((card, i) => {
+              let bgSrc;
+              let heightAttr = '';
+              switch (card.type) {
+                case 'yugioh':
+                  bgSrc = 'card-back-yugioh.png';
+                  break;
+                case 'pokemon':
+                  bgSrc = 'card-back-ptcg.png';
+                  break;
+                case 'tarot':
+                  bgSrc = 'card-back-tarot.png';
+                  heightAttr = ' height="523"';
+                  break;
+              }
+              return `<div id="card${i}" class="card">
+                        <img class="front" src="${card.imgSrc}" width="300" />
+                        <img class="back" src="${bgSrc}" width="300"${heightAttr} />
+                      </div>`;
+            })
+            .join('');
+          for (let i = 0; i < data.cards.length; i++) {
+            setTimeout(
+              () => {
+                document.getElementById(`card${i}`).classList.add('flip');
+              },
+              (i + 1) * 5000,
+            );
+          }
+        } else {
+          console.log('uh oh');
+        }
       };
       socket.onclose = () => {
         location.reload();

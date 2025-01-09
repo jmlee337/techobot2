@@ -345,9 +345,10 @@ export default class Twitch {
       }
       const lowerText = text.toLowerCase();
       if (lowerText.startsWith(`@${botUserName}`)) {
+        const modCommands = this.isModerator(userId) ? ' !chaoscards ' : '';
         this.chatClient?.say(
           channel,
-          '!tally !tallyrules !tallytop !tallylast - techobot2 made by Nicolet (@jmlee337)',
+          `!tally !tallyrules !tallytop !tallylast ${modCommands}- techobot2 made by Nicolet (@jmlee337)`,
         );
       } else if (lowerText.startsWith('!') && this.onCommandCallback) {
         this.onCommandCallback(lowerText.slice(1), userId, userName);

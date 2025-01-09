@@ -61,7 +61,7 @@ export type Tally = {
 };
 
 export type Card = {
-  type: 'yugioh' | 'pokemon';
+  type: 'yugioh' | 'pokemon' | 'tarot';
   name: string;
   flavorText: string;
   imgSrc: string;
