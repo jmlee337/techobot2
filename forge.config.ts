@@ -16,9 +16,9 @@ const config: ForgeConfig = {
     asar: true,
     extraResource: [
       './src/extraResource/chaosCards.html',
-      './src/extraResource/card-back-ptcg.html',
-      './src/extraResource/card-back-tarot.html',
-      './src/extraResource/card-back-yugioh.html',
+      './src/extraResource/card-back-ptcg.png',
+      './src/extraResource/card-back-tarot.png',
+      './src/extraResource/card-back-yugioh.png',
     ],
   },
   rebuildConfig: {},
