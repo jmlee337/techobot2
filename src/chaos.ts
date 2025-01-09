@@ -4,6 +4,7 @@ import path from 'node:path';
 import { WebSocket, WebSocketServer } from 'ws';
 import { Card, ChaosStatus } from './types';
 import getYugiohCard from './cards/yugioh';
+import getPokemonCard from './cards/pokemon';
 
 export default class Chaos {
   private onStatus: (status: ChaosStatus, message: string) => void;
@@ -55,7 +56,14 @@ export default class Chaos {
   }
 
   private async getCard() {
-    return getYugiohCard();
+    switch (Math.floor(Math.random() * 2)) {
+      case 0:
+        return getYugiohCard();
+      case 1:
+        return getPokemonCard();
+      default:
+        throw new Error('getCard oob');
+    }
   }
 
   async chaosCard() {
