@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Greetings from './Greetings';
 import ManualChaos from './ManualChaos';
 import Tally from './Tally';
+import Quest from './Quest';
 
 export default function App() {
   const [version, setVersion] = useState('');
@@ -28,6 +29,7 @@ export default function App() {
       <Grid2 container padding="8px 0" spacing={2}>
         <Grid2 size={4}>
           <Stack spacing="8px">
+            <Quest />
             <ManualRoll />
             <ManualChaos />
             <Greetings />

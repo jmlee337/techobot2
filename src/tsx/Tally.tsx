@@ -57,7 +57,7 @@ export default function Tally() {
           }}
           variant="contained"
         >
-          Tally
+          Tally Rally
         </Button>
         <Dialog
           open={open}

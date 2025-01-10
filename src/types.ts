@@ -77,3 +77,9 @@ export type StreamerbotAction = {
   id: string;
   name: string;
 };
+
+export enum QuestState {
+  SUGGESTING,
+  VOTING,
+  CLOSED,
+}
