@@ -11,12 +11,14 @@ import {
   DDDiceRoom,
   DDDiceFetchStatus,
   ChaosStatus,
+  StreamerbotStatus,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
 import Greetings from './greetings';
 import Chaos from './chaos';
 import Tally from './tally';
+import Streamerbot from './streamerbot';
 
 function parseRoll(roll: string): ParsedRoll {
   const rollLower = roll.toLowerCase();
@@ -53,11 +55,101 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     ddDiceApiKey: string;
     ddDiceRoomSlug: string;
     ddDiceThemeId: string;
+    streamerbotPort: number;
+    streamerbotChaosCardsActionId: string;
+    streamerbotQuestOpenActionId: string;
     twitchBotClient: TwitchClient;
     twitchBotAccessToken: AccessToken;
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+
+  // streamerbot
+  let streamerbotPort = store.get('streamerbotPort', 8080);
+  let streamerbotChaosCardsActionId = store.get(
+    'streamerbotChaosCardsActionId',
+    '',
+  );
+  let streamerbotQuestOpenActionId = store.get(
+    'streamerbotQuestOpenActionId',
+    '',
+  );
+  let streamerbotStatus = StreamerbotStatus.DISCONNECTED;
+  let streamerbotStatusMessage = '';
+  let streamerbotActions: { id: string; name: string }[] = [];
+  let streamerbotActionsError = '';
+  const streamerbot = new Streamerbot(
+    streamerbotPort,
+    streamerbotChaosCardsActionId,
+    streamerbotQuestOpenActionId,
+    (newStreamerbotStatus, newStreamerbotStatusMessage) => {
+      streamerbotStatus = newStreamerbotStatus;
+      streamerbotStatusMessage = newStreamerbotStatusMessage;
+      mainWindow.webContents.send(
+        'streamerbotStatus',
+        streamerbotStatus,
+        streamerbotStatusMessage,
+      );
+    },
+    (newStreamerbotActions) => {
+      streamerbotActions = newStreamerbotActions;
+      mainWindow.webContents.send('streamerbotActions', streamerbotActions);
+    },
+    (newStreamerbotActionsError) => {
+      streamerbotActionsError = newStreamerbotActionsError;
+      mainWindow.webContents.send(
+        'streamerbotActionsError',
+        streamerbotActionsError,
+      );
+    },
+  );
+  streamerbot.initialize();
+  console.log('past initialize');
+
+  ipcMain.removeAllListeners('getStreamerbotStatus');
+  ipcMain.handle('getStreamerbotStatus', () => ({
+    status: streamerbotStatus,
+    message: streamerbotStatusMessage,
+  }));
+
+  ipcMain.removeAllListeners('getStreamerbotActions');
+  ipcMain.handle('getStreamerbotActions', () => streamerbotActions);
+
+  ipcMain.removeAllListeners('getStreamerbotActionsError');
+  ipcMain.handle('getStreamerbotActionsError', () => streamerbotActionsError);
+
+  ipcMain.removeAllListeners('getStreamerbotPort');
+  ipcMain.handle('getStreamerbotPort', () => streamerbotPort);
+  ipcMain.removeAllListeners('streamerbotRetry');
+  ipcMain.handle('streamerbotRetry', async (event, port: number) => {
+    streamerbotPort = port;
+    store.set('streamerbotPort', streamerbotPort);
+    await streamerbot.retry(streamerbotPort);
+  });
+
+  ipcMain.removeAllListeners('getStreamerbotChaosCardsActionId');
+  ipcMain.handle(
+    'getStreamerbotChaosCardsActionId',
+    () => streamerbotChaosCardsActionId,
+  );
+  ipcMain.removeAllListeners('setStreamerbotChaosCardsActionId');
+  ipcMain.handle('setStreamerbotChaosCardsActionId', (event, id: string) => {
+    streamerbotChaosCardsActionId = id;
+    store.set('streamerbotChaosCardsActionId', streamerbotChaosCardsActionId);
+    streamerbot.setChaosCardsActionId(streamerbotChaosCardsActionId);
+  });
+
+  ipcMain.removeAllListeners('getStreamerbotQuestOpenActionId');
+  ipcMain.handle(
+    'getStreamerbotQuestOpenActionId',
+    () => streamerbotQuestOpenActionId,
+  );
+  ipcMain.removeAllListeners('setStreamerbotQuestOpenActionId');
+  ipcMain.handle('setStreamerbotQuestOpenActionId', (event, id: string) => {
+    streamerbotQuestOpenActionId = id;
+    store.set('streamerbotQuestOpenActionId', streamerbotQuestOpenActionId);
+    streamerbot.setQuestOpenActionId(streamerbotQuestOpenActionId);
+  });
 
   // tally
   const tally = new Tally();
@@ -90,10 +182,32 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('showChaosHtml', () => chaos.showHtml());
 
   ipcMain.removeAllListeners('chaosCard');
-  ipcMain.handle('chaosCard', () => chaos.chaosCard());
+  ipcMain.handle('chaosCard', async () => {
+    const card = await chaos.chaosCard();
+    streamerbot.doChaosCardsAction().catch(() => {
+      // just catch
+    });
+    setTimeout(() => {
+      twitch.say(`The card is ${card.name}: ${card.flavorText}`);
+    }, 20000);
+  });
 
   ipcMain.removeAllListeners('chaosPlus');
-  ipcMain.handle('chaosPlus', () => chaos.chaosPlus());
+  ipcMain.handle('chaosPlus', async () => {
+    const cards = await chaos.chaosPlus();
+    streamerbot.doChaosCardsAction().catch(() => {
+      // just catch
+    });
+    setTimeout(() => {
+      twitch.say(`The first card is ${cards[0].name}: ${cards[0].flavorText}`);
+    }, 20000);
+    setTimeout(() => {
+      twitch.say(`The second card is ${cards[1].name}: ${cards[1].flavorText}`);
+    }, 25000);
+    setTimeout(() => {
+      twitch.say(`The third card is ${cards[2].name}: ${cards[2].flavorText}`);
+    }, 30000);
+  });
 
   // greetings
   const greetings = new Greetings();
@@ -302,7 +416,7 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
-  twitch.onCommand(async (lowerCommand, userId, userName) => {
+  twitch.onCommand((lowerCommand, userId, userName) => {
     if (lowerCommand === 'tally') {
       if (twitch.isModerator(userId)) {
         twitch.say(
@@ -343,27 +457,6 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       twitch.say(
         'Channel rewards worth 100 points or more qualify! Top 3 become VIPs for the next month!',
       );
-    } else if (lowerCommand === 'chaoscards') {
-      if (twitch.isModerator(userId)) {
-        const cards = await chaos.chaosPlus();
-        setTimeout(() => {
-          twitch.say(
-            `The first card is ${cards[0].name}: ${cards[0].flavorText}`,
-          );
-        }, 20000);
-        setTimeout(() => {
-          twitch.say(
-            `The second card is ${cards[1].name}: ${cards[1].flavorText}`,
-          );
-        }, 25000);
-        setTimeout(() => {
-          twitch.say(
-            `The third card is ${cards[2].name}: ${cards[2].flavorText}`,
-          );
-        }, 30000);
-      } else {
-        twitch.say(`Sorry @${userName}, !chaoscards can only be used by mods.`);
-      }
     }
   });
   twitch.onRedemption(async (event) => {
@@ -394,6 +487,9 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       twitch.say(`@${event.userName} added a welcome message!`);
     } else if (event.rewardId === '0404b4be-9ed9-4cb9-afcf-6923c1564c7c') {
       const card = await chaos.chaosCard();
+      streamerbot.doChaosCardsAction().catch(() => {
+        // just catch
+      });
       setTimeout(() => {
         twitch.say(`@${event.userName} drew ${card.name}: ${card.flavorText}`);
       }, 20000);

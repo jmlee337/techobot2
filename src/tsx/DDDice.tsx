@@ -146,7 +146,7 @@ export default function DDDice() {
     />
   );
   const roomMapPred = ({ name, slug }: { name: string; slug: string }) => (
-    <ListItem disableGutters>
+    <ListItem key={slug} disablePadding>
       <ListItemButton
         disableGutters
         onClick={async () => {
@@ -163,7 +163,7 @@ export default function DDDice() {
     </ListItem>
   );
   const themeMapPred = ({ id, name }: { id: string; name: string }) => (
-    <ListItem disableGutters>
+    <ListItem key={id} disablePadding>
       <ListItemButton
         disableGutters
         onClick={async () => {
@@ -252,7 +252,7 @@ export default function DDDice() {
             {roomSlug ? 'CHANGE' : 'SET'}
           </Button>
           <DialogContentText>
-            dddice Room: {roomSlug ?? 'NONE'}
+            dddice Room: {roomSlug || 'NONE'}
           </DialogContentText>
           <Dialog
             fullWidth
@@ -308,7 +308,7 @@ export default function DDDice() {
             {themeId ? 'CHANGE' : 'SET'}
           </Button>
           <DialogContentText>
-            dddice Theme: {themeId ?? 'NONE'}
+            dddice Theme: {themeId || 'NONE'}
           </DialogContentText>
           <Dialog
             fullWidth

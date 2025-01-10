@@ -5,6 +5,8 @@ import {
   DDDiceRoom,
   DDDiceTheme,
   Greeting,
+  StreamerbotAction,
+  StreamerbotStatus,
   Tally,
   TwitchCallbackServerStatus,
   TwitchClient,
@@ -13,7 +15,57 @@ import {
 } from './types';
 
 const electronHandler = {
-  //tally
+  // streamerbot
+  getStreamerbotStatus: (): Promise<{
+    status: StreamerbotStatus;
+    message: string;
+  }> => ipcRenderer.invoke('getStreamerbotStatus'),
+  getStreamerbotActions: (): Promise<StreamerbotAction[]> =>
+    ipcRenderer.invoke('getStreamerbotActions'),
+  getStreamerbotActionsError: (): Promise<string> =>
+    ipcRenderer.invoke('getStreamerbotActionsError'),
+  getStreamerbotPort: (): Promise<number> =>
+    ipcRenderer.invoke('getStreamerbotPort'),
+  streamerbotRetry: (port: number): Promise<void> =>
+    ipcRenderer.invoke('streamerbotRetry', port),
+  getStreamerbotChaosCardsActionId: (): Promise<string> =>
+    ipcRenderer.invoke('getStreamerbotChaosCardsActionId'),
+  setStreamerbotChaosCardsActionId: (id: string): Promise<void> =>
+    ipcRenderer.invoke('setStreamerbotChaosCardsActionId', id),
+  getStreamerbotQuestOpenActionId: (): Promise<string> =>
+    ipcRenderer.invoke('getStreamerbotQuestOpenActionId'),
+  setStreamerbotQuestOpenActionId: (id: string): Promise<void> =>
+    ipcRenderer.invoke('setStreamerbotQuestOpenActionId', id),
+  onStreamerbotStatus: (
+    callback: (
+      event: IpcRendererEvent,
+      streamerbotStatus: StreamerbotStatus,
+      streamerbotStatusMessage: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('streamerbotStatus');
+    ipcRenderer.on('streamerbotStatus', callback);
+  },
+  onStreamerbotActions: (
+    callback: (
+      event: IpcRendererEvent,
+      streamerbotActions: StreamerbotAction[],
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('streamerbotActions');
+    ipcRenderer.on('streamerbotActions', callback);
+  },
+  onStreamerbotActionsError: (
+    callback: (
+      evevnt: IpcRendererEvent,
+      streamerbotActionsError: string,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('streamerbotActionsError');
+    ipcRenderer.on('streamerbotActionsError', callback);
+  },
+
+  // tally
   getTallyAll: (): Promise<Tally[]> => ipcRenderer.invoke('getTallyAll'),
   getTallyHasPast: (): Promise<boolean> =>
     ipcRenderer.invoke('getTallyHasPast'),

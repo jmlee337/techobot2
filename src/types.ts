@@ -66,3 +66,14 @@ export type Card = {
   flavorText: string;
   imgSrc: string;
 };
+
+export enum StreamerbotStatus {
+  DISCONNECTED,
+  CONNECTING,
+  CONNECTED,
+}
+
+export type StreamerbotAction = {
+  id: string;
+  name: string;
+};

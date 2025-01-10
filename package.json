@@ -53,6 +53,7 @@
     "@fontsource-variable/lora": "^5.1.1",
     "@mui/icons-material": "^6.3.1",
     "@mui/material": "^6.3.0",
+    "@streamerbot/client": "^1.9.5",
     "@twurple/api": "^7.2.1",
     "@twurple/api-call": "^7.2.1",
     "@twurple/auth": "^7.2.1",
