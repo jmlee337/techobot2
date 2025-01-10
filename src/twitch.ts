@@ -258,14 +258,25 @@ export default class Twitch {
     }
   }
 
-  stopBot() {
+  async stopBot() {
     if (!this.chatClient) {
       return;
     }
 
-    this.chatClient.quit();
-    this.chatClient = null;
-    this.onBotStatus(TwitchConnectionStatus.DISCONNECTED, '');
+    this.chatClient.removeListener();
+    return new Promise<void>((resolve) => {
+      if (!this.chatClient) {
+        resolve();
+        return;
+      }
+
+      this.chatClient.onDisconnect(() => {
+        this.chatClient = null;
+        this.onBotStatus(TwitchConnectionStatus.DISCONNECTED, '');
+        resolve();
+      });
+      this.chatClient.quit();
+    });
   }
 
   async startBot(): Promise<boolean> {
@@ -305,7 +316,7 @@ export default class Twitch {
       return false;
     }
 
-    this.stopBot();
+    await this.stopBot();
     this.onBotStatus(TwitchConnectionStatus.CONNECTING, '');
 
     const authProvider = new RefreshingAuthProvider(this.botClient);
@@ -358,14 +369,25 @@ export default class Twitch {
     return true;
   }
 
-  stopChannel() {
+  async stopChannel() {
     if (!this.eventSubWsListener) {
       return;
     }
 
-    this.eventSubWsListener.stop();
-    this.eventSubWsListener = null;
-    this.onChannelStatus(TwitchConnectionStatus.DISCONNECTED, '');
+    this.eventSubWsListener.removeListener();
+    return new Promise<void>((resolve) => {
+      if (!this.eventSubWsListener) {
+        resolve();
+        return;
+      }
+
+      this.eventSubWsListener.onUserSocketDisconnect(() => {
+        this.eventSubWsListener = null;
+        this.onChannelStatus(TwitchConnectionStatus.DISCONNECTED, '');
+        resolve();
+      });
+      this.eventSubWsListener.stop();
+    });
   }
 
   async startChannel(): Promise<boolean> {
@@ -402,7 +424,7 @@ export default class Twitch {
     }
     this.userId = tokenInfo.userId;
 
-    this.stopChannel();
+    await this.stopChannel();
     this.onChannelStatus(TwitchConnectionStatus.CONNECTING, '');
 
     const authProvider = new RefreshingAuthProvider(this.channelClient);
@@ -455,7 +477,6 @@ export default class Twitch {
         TwitchConnectionStatus.DISCONNECTED,
         error?.message ?? '',
       );
-      this.eventSubWsListener = null;
     });
     this.eventSubWsListener.start();
     return true;
@@ -511,18 +532,5 @@ export default class Twitch {
 
   isOpen() {
     return !!(this.chatClient || this.eventSubWsListener);
-  }
-
-  close() {
-    if (this.chatClient) {
-      this.chatClient.removeListener();
-      this.chatClient.quit();
-      this.chatClient = null;
-    }
-    if (this.eventSubWsListener) {
-      this.eventSubWsListener.removeListener();
-      this.eventSubWsListener.stop();
-      this.eventSubWsListener = null;
-    }
   }
 }

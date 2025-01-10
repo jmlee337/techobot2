@@ -128,25 +128,4 @@ export default class Chaos {
   isOpen() {
     return !!this.ws;
   }
-
-  async close() {
-    if (this.ws) {
-      this.ws.removeAllListeners();
-      this.ws.close();
-      this.ws = null;
-    }
-    if (this.server) {
-      this.server.removeAllListeners();
-      await new Promise<void>((resolve) => {
-        if (this.server) {
-          this.server.close(() => {
-            resolve();
-          });
-        } else {
-          resolve();
-        }
-      });
-      this.server = null;
-    }
-  }
 }

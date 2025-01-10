@@ -104,7 +104,6 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     },
   );
   streamerbot.initialize();
-  console.log('past initialize');
 
   ipcMain.removeAllListeners('getStreamerbotStatus');
   ipcMain.handle('getStreamerbotStatus', () => ({
@@ -569,18 +568,4 @@ export default function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('getTwitchChatters', () => twitch.getChatters());
 
   ipcMain.handle('getVersion', app.getVersion);
-
-  app.on('will-quit', async (event) => {
-    if (chaos.isOpen()) {
-      event.preventDefault();
-      await chaos.close();
-    }
-    if (twitch.isOpen()) {
-      event.preventDefault();
-      twitch.close();
-    }
-    if (event.defaultPrevented) {
-      app.quit();
-    }
-  });
 }
