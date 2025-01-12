@@ -189,6 +189,17 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     mainWindow.webContents.send('questSuggestions', getQuestSuggestions());
   });
 
+  ipcMain.removeAllListeners('getQuestCurrentCompletions');
+  ipcMain.handle('getQuestCurrentCompletions', () =>
+    quests.getCurrentCompletions(),
+  );
+
+  ipcMain.removeAllListeners('getQuestLastCompletions');
+  ipcMain.handle('getQuestLastCompletions', () => quests.getLastCompletions());
+
+  ipcMain.removeAllListeners('getQuestAllGolds');
+  ipcMain.handle('getQuestAllGolds', () => quests.getAllGolds());
+
   // streamerbot
   let streamerbotPort = store.get('streamerbotPort', 8080);
   let streamerbotChaosCardsActionId = store.get(
@@ -656,9 +667,12 @@ export default function setupIPC(mainWindow: BrowserWindow) {
           `Last party quest: ${last.desc}, gold: ${last.completedUserIds.length}${progress}`,
         );
       }
-    } else if (lowerCommand === 'questgold') {
-      const gold = quests.getGold();
+    } else if (lowerCommand === 'questgoldtotal') {
+      const gold = quests.getGoldTotal();
       twitch.say(`We have earned ${gold} gold total across all quests!`);
+    } else if (lowerCommand === 'questgold') {
+      const gold = quests.getGold(userId);
+      twitch.say(`@${userName} has earned ${gold} gold total for the party!`);
     }
   });
   twitch.onRedemption(async (event) => {

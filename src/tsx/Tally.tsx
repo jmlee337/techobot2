@@ -126,6 +126,7 @@ export default function Tally() {
             </Tabs>
             {past.map(({ key, tallies }) => (
               <div
+                key={key}
                 role="tabpanel"
                 hidden={key !== visibleKey}
                 id={`past-tabpanel-${key}`}

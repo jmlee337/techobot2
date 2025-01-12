@@ -102,3 +102,15 @@ export type QuestSuggestion = {
   desc: string;
   votes: number;
 };
+
+export type QuestCompletion = {
+  userId: string;
+  userName: string;
+  progress: number;
+};
+
+export type QuestGold = {
+  userId: string;
+  userName: string;
+  gold: number;
+};

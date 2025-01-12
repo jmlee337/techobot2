@@ -359,7 +359,7 @@ export default class Twitch {
         const modCommands = this.isModerator(userId) ? ' !chaoscards' : '';
         this.chatClient?.say(
           channel,
-          `!quest !questcomplete !questgold !questlast !questsuggest !questvote !tally !tallylast !tallyrules !tallytop${modCommands} - techobot2 made by Nicolet (@jmlee337)`,
+          `!quest !questcomplete !questgold !questgoldtotal !questlast !questsuggest !questvote !tally !tallylast !tallyrules !tallytop${modCommands} - techobot2 made by Nicolet (@jmlee337)`,
         );
       } else if (text.startsWith('!') && this.onCommandCallback) {
         this.onCommandCallback(text.slice(1), userId, userName);

@@ -5,6 +5,8 @@ import {
   DDDiceRoom,
   DDDiceTheme,
   Greeting,
+  QuestCompletion,
+  QuestGold,
   QuestState,
   QuestSuggestion,
   RendererQuest,
@@ -28,6 +30,12 @@ const electronHandler = {
     ipcRenderer.invoke('getQuestSuggestions'),
   deleteQuestSuggestion: (id: number): Promise<void> =>
     ipcRenderer.invoke('deleteQuestSuggestion', id),
+  getQuestCurrentCompletions: (): Promise<QuestCompletion[]> =>
+    ipcRenderer.invoke('getQuestCurrentCompletions'),
+  getQuestLastCompletions: (): Promise<QuestCompletion[]> =>
+    ipcRenderer.invoke('getQuestLastCompletions'),
+  getQuestAllGolds: (): Promise<QuestGold[]> =>
+    ipcRenderer.invoke('getQuestAllGolds'),
   onQuestCurrent: (
     callback: (event: IpcRendererEvent, quest: RendererQuest) => void,
   ) => {

@@ -1,7 +1,7 @@
 import DatabaseConstructor, { Database } from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'node:path';
-import { Quest } from './types';
+import { Quest, QuestCompletion, QuestGold } from './types';
 
 type DbQuest = {
   id: number;
@@ -44,9 +44,13 @@ export default class Quests {
   }
 
   getCompletions(questId: number) {
-    const completions = this.db
+    return this.db
       .prepare('SELECT * FROM completions WHERE questId = @questId')
       .all({ questId }) as DbCompletion[];
+  }
+
+  getProgressAndCompletedUserIds(questId: number) {
+    const completions = this.getCompletions(questId);
     return {
       progress:
         completions.length > 0
@@ -66,7 +70,7 @@ export default class Quests {
       return undefined;
     }
 
-    return { ...quest, ...this.getCompletions(quest.id) };
+    return { ...quest, ...this.getProgressAndCompletedUserIds(quest.id) };
   }
 
   getLast(): Quest | undefined {
@@ -78,10 +82,18 @@ export default class Quests {
     }
 
     const quest = quests[1];
-    return { ...quest, ...this.getCompletions(quest.id) };
+    return { ...quest, ...this.getProgressAndCompletedUserIds(quest.id) };
   }
 
-  getGold() {
+  getGold(userId: string) {
+    return (
+      this.db
+        .prepare('SELECT COUNT(*) FROM completions WHERE userId = @userId')
+        .get({ userId }) as { 'COUNT(*)': number }
+    )['COUNT(*)'];
+  }
+
+  getGoldTotal() {
     return (
       this.db.prepare('SELECT COUNT(*) FROM completions').get() as {
         'COUNT(*)': number;
@@ -109,5 +121,61 @@ export default class Quests {
           DO UPDATE SET userName = @userName, progress = progress + @progress`,
       )
       .run({ questId: current.id, userId, userName, progress });
+  }
+
+  getCurrentCompletions(): QuestCompletion[] {
+    const quest = this.db
+      .prepare('SELECT * FROM quests ORDER BY id DESC LIMIT 1')
+      .get() as DbQuest | undefined;
+    if (!quest) {
+      return [];
+    }
+
+    return this.getCompletions(quest.id).sort((a, b) =>
+      a.progress === b.progress
+        ? a.userName.localeCompare(b.userName)
+        : b.progress - a.progress,
+    );
+  }
+
+  getLastCompletions(): QuestCompletion[] {
+    const quests = this.db
+      .prepare('SELECT * FROM quests ORDER BY id DESC LIMIT 2')
+      .all() as Quest[];
+    if (quests.length !== 2) {
+      return [];
+    }
+
+    return this.getCompletions(quests[1].id).sort((a, b) =>
+      a.progress === b.progress
+        ? a.userName.localeCompare(b.userName)
+        : b.progress - a.progress,
+    );
+  }
+
+  getAllGolds(): QuestGold[] {
+    const allGold = this.db
+      .prepare('SELECT COUNT(*), userId FROM completions GROUP BY userId')
+      .all() as { 'COUNT(*)': number; userId: string }[];
+    const ret: QuestGold[] = [];
+    allGold.map((value) => {
+      const name = this.db
+        .prepare(
+          'SELECT userName FROM completions WHERE userId = @userId ORDER BY questId DESC LIMIT 1',
+        )
+        .get({ userId: value.userId }) as { userName: string } | undefined;
+      if (name) {
+        ret.push({
+          userId: value.userId,
+          userName: name.userName,
+          gold: value['COUNT(*)'],
+        });
+      }
+    });
+    return ret.sort((a, b) =>
+      a.gold === b.gold
+        ? a.userName.localeCompare(b.userName)
+        : b.gold - a.gold,
+    );
   }
 }
