@@ -78,8 +78,27 @@ export type StreamerbotAction = {
   name: string;
 };
 
+export type RendererQuest = {
+  desc: string;
+  progress: number;
+  gold: number;
+};
+
+export type Quest = {
+  id: number;
+  desc: string;
+  progress: number;
+  completedUserIds: string[];
+};
+
 export enum QuestState {
   SUGGESTING,
   VOTING,
   CLOSED,
 }
+
+export type QuestSuggestion = {
+  id: number;
+  desc: string;
+  votes: number;
+};

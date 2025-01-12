@@ -356,13 +356,13 @@ export default class Twitch {
       }
       const lowerText = text.toLowerCase();
       if (lowerText.startsWith(`@${botUserName}`)) {
-        const modCommands = this.isModerator(userId) ? ' !chaoscards ' : '';
+        const modCommands = this.isModerator(userId) ? ' !chaoscards' : '';
         this.chatClient?.say(
           channel,
-          `!tally !tallyrules !tallytop !tallylast ${modCommands}- techobot2 made by Nicolet (@jmlee337)`,
+          `!quest !questcomplete !questgold !questlast !questsuggest !questvote !tally !tallylast !tallyrules !tallytop${modCommands} - techobot2 made by Nicolet (@jmlee337)`,
         );
-      } else if (lowerText.startsWith('!') && this.onCommandCallback) {
-        this.onCommandCallback(lowerText.slice(1), userId, userName);
+      } else if (text.startsWith('!') && this.onCommandCallback) {
+        this.onCommandCallback(text.slice(1), userId, userName);
       }
     });
     this.chatClient.connect();
@@ -497,7 +497,7 @@ export default class Twitch {
   }
 
   onCommand(
-    callback: (lowerCommand: string, userId: string, userName: string) => void,
+    callback: (command: string, userId: string, userName: string) => void,
   ) {
     this.onCommandCallback = callback;
   }

@@ -52,9 +52,9 @@ export default class Tally {
     this.db
       .prepare(
         `INSERT INTO tally (userId, userName, points)
-        VALUES (@userId, @userName, @points)
-        ON CONFLICT (userId)
-        DO UPDATE SET userName = @userName, points = points + @points`,
+          VALUES (@userId, @userName, @points)
+          ON CONFLICT (userId)
+          DO UPDATE SET userName = @userName, points = points + @points`,
       )
       .run({ userId, userName, points });
   }

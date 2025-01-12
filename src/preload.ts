@@ -5,6 +5,9 @@ import {
   DDDiceRoom,
   DDDiceTheme,
   Greeting,
+  QuestState,
+  QuestSuggestion,
+  RendererQuest,
   StreamerbotAction,
   StreamerbotStatus,
   Tally,
@@ -15,6 +18,29 @@ import {
 } from './types';
 
 const electronHandler = {
+  // quests
+  getQuestState: (): Promise<QuestState> => ipcRenderer.invoke('getQuestState'),
+  setQuestState: (state: QuestState): Promise<QuestState> =>
+    ipcRenderer.invoke('setQuestState', state),
+  getQuestCurrent: (): Promise<RendererQuest> =>
+    ipcRenderer.invoke('getQuestCurrent'),
+  getQuestSuggestions: (): Promise<QuestSuggestion[]> =>
+    ipcRenderer.invoke('getQuestSuggestions'),
+  deleteQuestSuggestion: (id: number): Promise<void> =>
+    ipcRenderer.invoke('deleteQuestSuggestion', id),
+  onQuestCurrent: (
+    callback: (event: IpcRendererEvent, quest: RendererQuest) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('questCurrent');
+    ipcRenderer.on('questCurrent', callback);
+  },
+  onQuestSuggestions: (
+    callback: (event: IpcRendererEvent, suggestions: QuestSuggestion[]) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('questSuggestions');
+    ipcRenderer.on('questSuggestions', callback);
+  },
+
   // streamerbot
   getStreamerbotStatus: (): Promise<{
     status: StreamerbotStatus;

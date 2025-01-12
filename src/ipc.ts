@@ -12,6 +12,9 @@ import {
   DDDiceFetchStatus,
   ChaosStatus,
   StreamerbotStatus,
+  QuestState,
+  QuestSuggestion,
+  RendererQuest,
 } from './types';
 import { AccessToken } from '@twurple/auth';
 import DDDice from './dddice';
@@ -19,6 +22,7 @@ import Greetings from './greetings';
 import Chaos from './chaos';
 import Tally from './tally';
 import Streamerbot from './streamerbot';
+import Quests from './quests';
 
 function parseRoll(roll: string): ParsedRoll {
   const rollLower = roll.toLowerCase();
@@ -63,6 +67,127 @@ export default function setupIPC(mainWindow: BrowserWindow) {
     twitchChannelClient: TwitchClient;
     twitchChannelAccessToken: AccessToken;
   }>();
+
+  // quest
+  const quests = new Quests();
+  const current = quests.getCurrent();
+  let questCurrentDesc = current?.desc ?? '';
+  let questCurrentProgress = current?.progress ?? 0;
+  const questCurrentCompletions = new Set(current?.completedUserIds ?? []);
+  let questState = QuestState.CLOSED;
+  let nextQuestSuggestionId = 1;
+  const idToQuestSuggestionDesc = new Map<number, string>();
+  const userIdToSuggestionId = new Map<string, number>();
+  const getQuestSuggestions = (): QuestSuggestion[] => {
+    const suggestionIdToVotes = new Map<number, number>();
+    for (const suggestionId of userIdToSuggestionId.values()) {
+      suggestionIdToVotes.set(
+        suggestionId,
+        (suggestionIdToVotes.get(suggestionId) ?? 0) + 1,
+      );
+    }
+
+    const suggestions: { id: number; desc: string; votes: number }[] = [];
+    for (const [id, desc] of idToQuestSuggestionDesc) {
+      suggestions.push({
+        id,
+        desc,
+        votes: suggestionIdToVotes.get(id) ?? 0,
+      });
+    }
+    return suggestions;
+  };
+
+  ipcMain.removeAllListeners('getQuestState');
+  ipcMain.handle('getQuestState', () => questState);
+  ipcMain.removeAllListeners('setQuestState');
+  ipcMain.handle('setQuestState', (event, newQuestState: QuestState) => {
+    if (
+      questState === QuestState.CLOSED &&
+      newQuestState === QuestState.VOTING
+    ) {
+      return questState;
+    }
+
+    if (
+      questState === QuestState.CLOSED &&
+      newQuestState === QuestState.SUGGESTING
+    ) {
+      twitch.say(
+        'New party quest suggestions are open! Use !questsuggest [your suggestion here]',
+      );
+    }
+    if (
+      questState === QuestState.SUGGESTING &&
+      newQuestState === QuestState.VOTING
+    ) {
+      twitch.say(
+        'Voting on party quest suggestions has started! Use !questvote [suggestion number]',
+      );
+    }
+    if (
+      questState === QuestState.VOTING &&
+      newQuestState === QuestState.CLOSED
+    ) {
+      const suggestionIdToVotes = new Map<number, number>();
+      for (const suggestionId of userIdToSuggestionId.values()) {
+        suggestionIdToVotes.set(
+          suggestionId,
+          (suggestionIdToVotes.get(suggestionId) ?? 0) + 1,
+        );
+      }
+
+      let winnerId = -1;
+      let max = 0;
+      for (const [suggestionId, votes] of suggestionIdToVotes) {
+        if (votes > max) {
+          winnerId = suggestionId;
+          max = votes;
+        }
+      }
+      const winnerDesc = idToQuestSuggestionDesc.get(winnerId);
+      if (!winnerDesc) {
+        throw new Error('no winner desc');
+      }
+      quests.push(winnerDesc);
+      questCurrentDesc = winnerDesc;
+      questCurrentProgress = 0;
+      questCurrentCompletions.clear();
+      mainWindow.webContents.send('questCurrent', {
+        desc: questCurrentDesc,
+        progress: 0,
+        gold: 0,
+      });
+      twitch.say(`With ${max} votes, the next party quest is "${winnerDesc}"`);
+    }
+    if (newQuestState === QuestState.CLOSED) {
+      nextQuestSuggestionId = 1;
+      idToQuestSuggestionDesc.clear();
+      userIdToSuggestionId.clear();
+      mainWindow.webContents.send('questSuggestions', getQuestSuggestions());
+    }
+    questState = newQuestState;
+    return questState;
+  });
+
+  ipcMain.removeAllListeners('getQuestCurrent');
+  ipcMain.handle(
+    'getQuestCurrent',
+    (): RendererQuest => ({
+      desc: questCurrentDesc,
+      progress: questCurrentProgress,
+      gold: questCurrentCompletions.size,
+    }),
+  );
+
+  ipcMain.removeAllListeners('getQuestSuggestions');
+  ipcMain.handle('getQuestSuggestions', getQuestSuggestions);
+
+  ipcMain.removeAllListeners('deleteQuestSuggestion');
+  ipcMain.handle('deleteQuestSuggestion', (event, id: number) => {
+    idToQuestSuggestionDesc.delete(id);
+    mainWindow.webContents.send('questSuggestions', getQuestSuggestions());
+  });
 
   // streamerbot
   let streamerbotPort = store.get('streamerbotPort', 8080);
@@ -415,7 +540,8 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('twitchChannel', twitchChannel);
     },
   );
-  twitch.onCommand((lowerCommand, userId, userName) => {
+  twitch.onCommand((command, userId, userName) => {
+    const lowerCommand = command.toLowerCase();
     if (lowerCommand === 'tally') {
       if (twitch.isModerator(userId)) {
         twitch.say(
@@ -456,6 +582,83 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       twitch.say(
         'Channel rewards worth 100 points or more qualify! Top 3 become VIPs for the next month!',
       );
+    } else if (lowerCommand.startsWith('questsuggest')) {
+      if (questState === QuestState.SUGGESTING) {
+        idToQuestSuggestionDesc.set(nextQuestSuggestionId, command.slice(13));
+        nextQuestSuggestionId++;
+        mainWindow.webContents.send('questSuggestions', getQuestSuggestions());
+      } else {
+        twitch.say(
+          `Sorry @${userName}, party quest suggestions are not open right now`,
+        );
+      }
+    } else if (lowerCommand.startsWith('questvote')) {
+      if (questState === QuestState.VOTING) {
+        const arg = command.slice(10);
+        const suggestionId = parseInt(arg, 10);
+        if (idToQuestSuggestionDesc.has(suggestionId)) {
+          userIdToSuggestionId.set(userId, suggestionId);
+          mainWindow.webContents.send(
+            'questSuggestions',
+            getQuestSuggestions(),
+          );
+        } else {
+          twitch.say(
+            `Sorry @${userName}, number ${arg} does not correspond to any suggested quest`,
+          );
+        }
+      } else {
+        twitch.say(
+          `Sorry @${userName}, party quest voting is not open right now`,
+        );
+      }
+    } else if (lowerCommand === 'quest') {
+      if (questCurrentDesc && questState === QuestState.CLOSED) {
+        const progress =
+          questCurrentProgress > 0
+            ? ` (group progress: ${questCurrentProgress})`
+            : '';
+        twitch.say(
+          `${questCurrentDesc}, gold: ${questCurrentCompletions.size}${progress}`,
+        );
+      }
+    } else if (lowerCommand.startsWith('questcomplete')) {
+      if (questState === QuestState.CLOSED && questCurrentDesc) {
+        let progress = 0;
+        if (command.length > 14) {
+          const arg = parseInt(command.slice(14), 10);
+          if (Number.isInteger(arg) && arg > 0) {
+            progress = arg;
+          }
+        }
+        try {
+          quests.complete(userId, userName, progress);
+          questCurrentProgress += progress;
+          questCurrentCompletions.add(userId);
+          mainWindow.webContents.send('questCurrent', {
+            desc: questCurrentDesc,
+            progress: questCurrentProgress,
+            gold: questCurrentCompletions.size,
+          });
+          twitch.say(`@${userName} completed the quest!`);
+        } catch {
+          // just catch
+        }
+      } else {
+        twitch.say(`Sorry @${userName}, there is no party quest yet`);
+      }
+    } else if (lowerCommand === 'questlast') {
+      const last = quests.getLast();
+      if (last) {
+        const progress =
+          last.progress > 0 ? ` (group progress: ${last.progress})` : '';
+        twitch.say(
+          `Last party quest: ${last.desc}, gold: ${last.completedUserIds.length}${progress}`,
+        );
+      }
+    } else if (lowerCommand === 'questgold') {
+      const gold = quests.getGold();
+      twitch.say(`We have earned ${gold} gold total across all quests!`);
     }
   });
   twitch.onRedemption(async (event) => {
