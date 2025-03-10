@@ -1,7 +1,7 @@
 {
   "name": "techobot2",
   "productName": "techobot2",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Tori's Twitch Bot v2",
   "main": ".webpack/main",
   "scripts": {
