@@ -84,18 +84,18 @@ const cardIds = [
   'sv3pt5-181',
 ];
 
-export default async function getPokemonCard(htmlPath: string): Promise<Card> {
+export default async function getPokemonCard(): Promise<Card> {
   const id = cardIds[Math.floor(Math.random() * cardIds.length)];
   const cardResponse = await fetch(`https://api.pokemontcg.io/v2/cards/${id}`);
   const card = (await cardResponse.json()).data;
 
-  const basePath = path.join(app.getPath('temp'), 'cards', 'pokemon');
-  const imgSrc = path.join(basePath, `${id}.png`);
+  const imgPath = path.join('cards', 'pokemon', `${id}.jpg`);
+  const imgSrc = path.join(app.getPath('userData'), imgPath);
   try {
     await access(imgSrc);
   } catch {
     const imgResponse = await fetch(card.images.large);
-    await mkdir(basePath, { recursive: true });
+    await mkdir(path.dirname(imgSrc), { recursive: true });
     await writeFile(imgSrc, Buffer.from(await imgResponse.arrayBuffer()));
   }
 
@@ -103,6 +103,6 @@ export default async function getPokemonCard(htmlPath: string): Promise<Card> {
     type: 'pokemon',
     name: card.name,
     flavorText: card.flavorText,
-    imgSrc: path.relative(htmlPath, imgSrc),
+    imgSrc: imgPath,
   };
 }

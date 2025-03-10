@@ -84,7 +84,7 @@ const cards = [
   'Phantasm Spiral Dragon',
 ];
 
-export default async function getYugiohCard(htmlPath: string): Promise<Card> {
+export default async function getYugiohCard(): Promise<Card> {
   const name = cards[Math.floor(Math.random() * cards.length)];
   const cardResponse = await fetch(
     `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${name}`,
@@ -92,13 +92,13 @@ export default async function getYugiohCard(htmlPath: string): Promise<Card> {
   const card = (await cardResponse.json()).data[0];
 
   const { id } = card.card_images[0];
-  const basePath = path.join(app.getPath('temp'), 'cards', 'yugioh');
-  const imgSrc = path.join(basePath, `${id}.jpg`);
+  const imgPath = path.join('cards', 'yugioh', `${id}.jpg`);
+  const imgSrc = path.join(app.getPath('userData'), imgPath);
   try {
     await access(imgSrc);
   } catch {
     const imgResponse = await fetch(card.card_images[0].image_url);
-    await mkdir(basePath, { recursive: true });
+    await mkdir(path.dirname(imgSrc), { recursive: true });
     await writeFile(imgSrc, Buffer.from(await imgResponse.arrayBuffer()));
   }
 
@@ -106,6 +106,6 @@ export default async function getYugiohCard(htmlPath: string): Promise<Card> {
     type: 'yugioh',
     name,
     flavorText: card.desc,
-    imgSrc: path.relative(htmlPath, imgSrc),
+    imgSrc: imgPath,
   };
 }
