@@ -73,7 +73,7 @@ export default class Chaos {
         }
       }
     }
-    this.path = this.files[0].fullPath;
+    this.path = path.join(userDataPath, this.files[0].fileName);
   }
 
   showHtml() {
