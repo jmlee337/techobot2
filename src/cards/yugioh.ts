@@ -84,7 +84,7 @@ const cards = [
   'Phantasm Spiral Dragon',
 ];
 
-export default async function getYugiohCard(): Promise<Card> {
+export default async function getYugiohCard(htmlPath: string): Promise<Card> {
   const name = cards[Math.floor(Math.random() * cards.length)];
   const cardResponse = await fetch(
     `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${name}`,
@@ -102,5 +102,10 @@ export default async function getYugiohCard(): Promise<Card> {
     await writeFile(imgSrc, Buffer.from(await imgResponse.arrayBuffer()));
   }
 
-  return { type: 'yugioh', name, flavorText: card.desc, imgSrc };
+  return {
+    type: 'yugioh',
+    name,
+    flavorText: card.desc,
+    imgSrc: path.relative(htmlPath, imgSrc),
+  };
 }

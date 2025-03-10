@@ -10,9 +10,9 @@ import getTarotCard from './cards/tarot';
 async function getCard() {
   switch (Math.floor(Math.random() * 3)) {
     case 0:
-      return getYugiohCard();
+      return getYugiohCard(this.path);
     case 1:
-      return getPokemonCard();
+      return getPokemonCard(this.path);
     case 2:
       return getTarotCard();
     default:
@@ -73,6 +73,7 @@ export default class Chaos {
         }
       }
     }
+    this.path = this.files[0].fullPath;
   }
 
   showHtml() {
@@ -106,10 +107,11 @@ export default class Chaos {
     }
 
     const cards = await Promise.all([
-      getYugiohCard(),
+      getYugiohCard(this.path),
       getTarotCard(),
-      getPokemonCard(),
+      getPokemonCard(this.path),
     ]);
+    console.log(cards.map((card) => card.imgSrc).join(', '));
     return new Promise<Card[]>((resolve, reject) => {
       if (!this.ws) {
         reject('no WebSocketClient');

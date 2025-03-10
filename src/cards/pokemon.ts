@@ -84,7 +84,7 @@ const cardIds = [
   'sv3pt5-181',
 ];
 
-export default async function getPokemonCard(): Promise<Card> {
+export default async function getPokemonCard(htmlPath: string): Promise<Card> {
   const id = cardIds[Math.floor(Math.random() * cardIds.length)];
   const cardResponse = await fetch(`https://api.pokemontcg.io/v2/cards/${id}`);
   const card = (await cardResponse.json()).data;
@@ -103,6 +103,6 @@ export default async function getPokemonCard(): Promise<Card> {
     type: 'pokemon',
     name: card.name,
     flavorText: card.flavorText,
-    imgSrc,
+    imgSrc: path.relative(htmlPath, imgSrc),
   };
 }
