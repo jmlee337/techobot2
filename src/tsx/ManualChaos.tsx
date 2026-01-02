@@ -14,6 +14,7 @@ export default function ManualChaos() {
             setSending(true);
             try {
               await window.electron.chaosCard();
+              setError('');
             } catch (e: unknown) {
               if (e instanceof Error) {
                 setError(e.message);
@@ -31,6 +32,7 @@ export default function ManualChaos() {
             setSending(true);
             try {
               await window.electron.chaosPlus();
+              setError('');
             } catch (e: unknown) {
               if (e instanceof Error) {
                 setError(e.message);

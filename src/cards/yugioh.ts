@@ -89,6 +89,11 @@ export default async function getYugiohCard(): Promise<Card> {
   const cardResponse = await fetch(
     `https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${name}`,
   );
+  if (cardResponse.status !== 200) {
+    throw new Error(
+      `Yu-Gi-Oh! ${cardResponse.status}: ${cardResponse.statusText}`,
+    );
+  }
   const card = (await cardResponse.json()).data[0];
 
   const { id } = card.card_images[0];

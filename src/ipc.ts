@@ -702,13 +702,19 @@ export default function setupIPC(mainWindow: BrowserWindow) {
       greetings.setGreeting(event.userId, event.userName, event.input);
       twitch.say(`@${event.userName} added a welcome message!`);
     } else if (event.rewardId === '0404b4be-9ed9-4cb9-afcf-6923c1564c7c') {
-      const card = await chaos.chaosCard();
-      streamerbot.doChaosCardsAction().catch(() => {
-        // just catch
-      });
-      setTimeout(() => {
-        twitch.say(`@${event.userName} drew ${card.name}: ${card.flavorText}`);
-      }, 20000);
+      try {
+        const card = await chaos.chaosCard();
+        streamerbot.doChaosCardsAction().catch(() => {
+          // just catch
+        });
+        setTimeout(() => {
+          twitch.say(
+            `@${event.userName} drew ${card.name}: ${card.flavorText}`,
+          );
+        }, 20000);
+      } catch (e: unknown) {
+        twitch.say(`Chaos card error!: ${e instanceof Error ? e.message : e}`);
+      }
     }
   });
   twitch.onSeen((userId) => {
